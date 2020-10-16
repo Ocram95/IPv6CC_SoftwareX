@@ -26,7 +26,7 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 - [Usage](#Usage)
 
 ## Architecture
-![Alt text](/docs/architecture/softarch.pdf?raw=true)
+![Alt text](/docs/architecture/softarch?raw=true)
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant plus
 an additional script, i.e., the helper.py script, which contains functions shared among all channels.
 IPv6CC uses a combination of different libraries:
