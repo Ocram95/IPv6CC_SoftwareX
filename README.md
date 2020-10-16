@@ -1,11 +1,10 @@
-# IPv6 Covert Channels Suite
-This repository contains several network covert channels based on IPv6 protocol. The covert channels allow a sender to secretly communicate
+# IPv6CC Suite
+IPv6CC implements several network covert channels based on IPv6 protocol in Python3. The covert channels allow a sender to secretly communicate
 with a receiver, by injecting the information through three possible field of the header:
 
 - Traffic Class (8 bit/packet)
 - Flow Label (20 bit/packet)
 - Hop Limit (1 bit/packet)
-
 There are multiple variants implemented:
 - Naive implementations:
 	- magic value: the covert sender and the covert receiver agree on a value (which can be found at the start of each .py file). 
@@ -23,33 +22,26 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 ## Table of Contents
 
 - [Architecture](#architecture)
-- [Libraries](#libraries)
 - [Installation](#installation)
 - [Usage](#Usage)
 
 ## Architecture
-image
-
-## Libraries
-
-The following libraries for the implementation have been used:
-
+![Alt text](/docs/architecture/softarch.pdf?raw=true)
+IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant plus
+an additional script, i.e., the helper.py script, which contains functions shared among all channels.
+IPv6CC uses a combination of different libraries:
 - Scapy 2.4.3 (https://scapy.net/)
-- NetfilterQueue (https://github.com/kti/python-netfilterqueue)
+- NetfilterQueue 0.8.1 (https://github.com/kti/python-netfilterqueue)
+In detail, NetfilterQueue is used to insert packets which match a specific ip6tables rule (which can be found in the helper.py file) into a queue. A callback function (inject or extraction function) is called by the library each time that a packet is inserted into the queue. The callback function uses Scapy primitives to access the packet and inject, or extract, the secret information.
 
-Scapy is used for the injection and extraction of the secret information in the corresponding fields.
-
-NetfilterQueue is used to insert specific packets which match an ip6tables rule into the netfilter queue number.
-
-Multiple dependencies are required. We recommend the use of Docker to install the suite.
 
 
 
 ## Installation
-The simply way to use IPv6 Covert Channels suite is to clone the repository and use the dockerfile to build a Docker container:
+The simply way to use IPv6CC is to clone the repository and use the dockerfile to build a Docker container:
  ```	
 $  git clone https://github.com/covert-channels-ipv6/ipv6_cc_scripts.git
-$  docker build -t name_of_container /path_to_dockerfile
+$  docker build -t name_of_container /docker/Dockerfile
  ```
  
  Another possibility is to clone the repository and manually install all libraries needed and their dependencies.
