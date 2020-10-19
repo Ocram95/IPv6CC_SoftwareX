@@ -14,10 +14,12 @@ class Traffic_Class_CC:
 
 	def __init__(self, filepath, chunks, role, number_clean_packets, length_stego_packets):
 		'''
-		Constructor for sender and receiver of a Traffic Class Covert Channel
-		:param list chunks: A list of strings in binary format, which shall be injected into the traffic class field.
-		:param policy: injection policy: n stego-packets every n clear packets
-		:raises ValueError: if the chunks is an empty list.
+		Constructor for sender and receiver of a Traffic Class cc.
+		:param filepath: The path to the message to hide. 
+		:param chunks: A string list containing the message to hide splitted in chunks.
+		:param role: The role (i.e., sender or receiver) assigned.
+		:param number_clean_packets: The length of the burst of non-stego packets.
+		:param length_stego_packets: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks
 		self.int_chunks = [int(x,2) for x in self.chunks] 				
@@ -31,12 +33,12 @@ class Traffic_Class_CC:
 		self.next_expected_seq = 0
 		self.count_stego_retransmissions = 0
 
-		self.number_of_repititions = 20
-		self.number_of_repititions_done = 0
+		self.number_of_repetitions = 20
+		self.number_of_repetitions_done = 0
 
-		self.sent_received_chunks = 0		# Contains the number of sent/received chunks/injected packets (depending on the role of the class).
-		self.nfqueue = NetfilterQueue()		# The netfilter object which is bound on the netfilter queue.
-		self.exfiltrated_data = []			# A list with signatures and the corresponding injected values.
+		self.sent_received_chunks = 0
+		self.nfqueue = NetfilterQueue()
+		self.exfiltrated_data = []
 
 		# ------------------- MEASUREMENT VARIABLES ------------------- #
 		self.starttime_stegocommunication = 0.0
@@ -44,16 +46,13 @@ class Traffic_Class_CC:
 		self.injection_exfiltration_time_sum = 0.0
 		
 	def inject(self, packet):
-
 		'''
-		The inject method of the sender, which is bound the the netfilter queue NETFILTERQUEUE_NUMBER.
-		This method injects the content of chunks into the traffic class field of parameter packet.
-		The injected content is saved into self.injected_data. Then it increments the counter self.sent_received_chunks and self.received_packets by 1.
-		Then the payload of the altered packet is set. This is done considering the policy parameter.
-
-		:param Packet packet: The NetfilterQueue Packet object packet, where the exfiltrated data is injected into the traffic class field.
-		'''
-		if self.number_of_repititions_done < self.number_of_repititions: 
+	   	The inject method of the sender, which is bound the the netfilter queue NETFILTERQUEUE_NUMBER.
+	   	This method injects the i-th chunks of the secret message (i.e., self.chunks[self.sent_received_chunks])
+	   	into the targeted field, accordingly to the sending mode used (i.e., interleaved or burst).
+	   	:param Packet packet: The NetfilterQueue Packet object packet.
+	   	'''
+		if self.number_of_repetitions_done < self.number_of_repetitions: 
 			tmp1 = time.perf_counter()
 			pkt = IPv6(packet.get_payload())
 			if pkt.nh == 6:
@@ -100,7 +99,7 @@ class Traffic_Class_CC:
 					pkt.fl = Traffic_Class_CC.END_SIGNATURE
 					self.endtime_stegocommunication = time.perf_counter()
 					self.stegotime = True
-					self.number_of_repititions_done += 1
+					self.number_of_repetitions_done += 1
 					self.statistical_evaluation_sent_packets()
 					self.write_csv()
 					self.injection_exfiltration_time_sum = 0
@@ -115,14 +114,12 @@ class Traffic_Class_CC:
 
 	def exfiltrate(self, packet):
 		'''
-		The exfiltration method of the receiver, which is bound the the netfilter queue NETFILTERQUEUE_NUMBER.
-		This method exfiltrates the content of the traffic class field of the received packet.
-		The content is saved into self.exfiltrated_data. Then it increments the counter self.sent_sent_received_chunks and self.received_packets by 1. If nothing
-		is exfiltrated only the last counter is incremented. The list self.chunks_int_exfiltration is used to check if the message is correctly exfiltrated.
-
-		:param Packet packet: The NetfilterQueue Packet object which is received and can be transformed into Scapy IPv6()-packet.
-		'''
-		if self.number_of_repititions_done < self.number_of_repititions: 
+	   	The exfiltration method of the receiver, which is bound the the netfilter queue NETFILTERQUEUE_NUMBER.
+	   	This method extracts the value contained into the targeted field, accordingly to the sending mode used 
+	   	(i.e., interleaved or burst).
+	   	:param Packet packet: The NetfilterQueue Packet object.
+	   	'''
+		if self.number_of_repetitions_done < self.number_of_repetitions: 
 			tmp1 = time.perf_counter()
 			pkt = IPv6(packet.get_payload())
 			if self.stegotime:
@@ -139,7 +136,7 @@ class Traffic_Class_CC:
 			if pkt.fl == Traffic_Class_CC.END_SIGNATURE:
 				self.endtime_stegocommunication = time.perf_counter()
 				self.stegotime = True
-				self.number_of_repititions_done += 1
+				self.number_of_repetitions_done += 1
 				self.statistical_evaluation_received_packets()
 				self.write_csv()
 				self.injection_exfiltration_time_sum = 0
@@ -201,10 +198,9 @@ class Traffic_Class_CC:
 
 	def start_sending(self):
 		'''
-		Binds the inject method to the netfilter queue with its specific number and runs the callback function. If the user press Ctrl + c
-		the inject method is unbind.  
+		Binds the inject method to the netfilter queue with its specific number and runs the callback function. 
+		If the user press Ctrl + c the inject method is unbind.  
 		'''
-
 		self.nfqueue.bind(helper.NETFILTER_QUEUE_NUMBER, self.inject)
 		try:
 			self.nfqueue.run()
@@ -214,8 +210,8 @@ class Traffic_Class_CC:
 
 	def start_receiving(self):
 		'''
-		Binds the exfiltrate method to the netfilter queue with its specific number and runs the callback function. If the user press Ctrl + c
-		the inject method is unbind.  
+		Binds the exfiltrate method to the netfilter queue with its specific number and runs the callback function. 
+		If the user press Ctrl + c the inject method is unbind.  
 		'''
 		self.nfqueue.bind(helper.NETFILTER_QUEUE_NUMBER, self.exfiltrate)
 		try:
@@ -232,7 +228,7 @@ class Traffic_Class_CC:
 			print('################## Mode: Signature Implementation TCP | CC: Traffic Class | Side: Covert Sender ##################')
 		else:
 			print('################## Mode: Signature Implementation TCP | CC: Traffic Class | Side: Covert Receiver ##################')
-		print('- Number of Repetitions: ' + str(self.number_of_repititions))		
+		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		print('- Signature in field: Flow Label')			
 		print('- Exfiltrated File: ' + self.filepath)
 		if self.number_clean_packets > 0 and self.length_stego_packets > 0:
@@ -263,7 +259,7 @@ class Traffic_Class_CC:
 		
 		print('')
 		print('##################### ANALYSIS SENT DATA #####################')
-		print("- Number of Repetitions: " + str(self.number_of_repititions_done) + "/" + str(self.number_of_repititions))
+		print("- Number of Repetitions: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
 		print("- Sent Chunks: " + str(self.sent_received_chunks) + "/" + str(len(self.int_chunks)))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Injection Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
@@ -295,7 +291,7 @@ class Traffic_Class_CC:
 
 		print('')
 		print('##################### ANALYSIS RECEIVED DATA #####################')
-		print("- Number of Repetitions: " + str(self.number_of_repititions_done) + "/" + str(self.number_of_repititions))
+		print("- Number of Repetitions: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
 		print("- Received Chunks: " + str(self.sent_received_chunks) + "/" + str(len(self.int_chunks)))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")

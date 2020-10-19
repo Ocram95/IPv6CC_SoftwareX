@@ -17,20 +17,20 @@ class Flow_Label_CC:
 
 	def __init__(self, chunks, role, number_clean_packets, length_stego_packets):
 		'''
-		Constructor for sender and receiver of a Flow Label Covert Channel
-		:param list chunks: A list of strings in binary format, which shall be injected into the Flow Label field.
-		:param policy: injection policy: n stego-packets every n clear packets
-		:raises ValueError: if the chunks is an empty list.
+		Constructor for sender and receiver of a Flow Label cc.
+		:param chunks: A string list containing the message to hide splitted in chunks.
+		:param role: The role (i.e., sender or receiver) assigned.
+		:param number_clean_packets: The length of the burst of non-stego packets.
+		:param length_stego_packets: The lenght of the burst of stego packets
 		'''
-
-		self.chunks = chunks 			# A list with binary strings. These is this secret what shall be injected.
-		self.chunks_int = [int(x,2) for x in self.chunks]	# The list of chunks converted to int
+		self.chunks = chunks
+		self.chunks_int = [int(x,2) for x in self.chunks]
 		
-		self.sent_received_chunks = 0		# Contains the number of sent/received chunks/injected packets (depending on the role of the class).
-		self.nfqueue = NetfilterQueue()		# The netfilter object which is bound on the netfilter queue.
-		self.exfiltrated_data = []			# A list with signatures and the corresponding injected values.
-		self.sent_packets = 0				# Number of sent packets in general (injected AND not injected).
-		self.received_packets = 0			# The number of received packets (exfiltrated AND not exfiltrated).
+		self.sent_received_chunks = 0
+		self.nfqueue = NetfilterQueue()
+		self.exfiltrated_data = []
+		self.sent_packets = 0
+		self.received_packets = 0
 		self.role = role
 		self.first_packet = True
 		self.start_exf = False
@@ -53,13 +53,10 @@ class Flow_Label_CC:
 	def exfiltrate(self, packet):
 		'''
 	   	The exfiltration method of the receiver, which is bound the the netfilter queue NETFILTERQUEUE_NUMBER.
-	   	This method exfiltrates the content of the flow label field of the received packet.
-	   	The content is saved into self.exfiltrated_data. Then it increments the counter self.sent_received_chunks and self.received_packets by 1. If nothing
-	   	is exfiltrated only the last counter is incremented. The list self.chunks_int_exfiltration is used to check if the message is correctly exfiltrated.
-
-	   	:param Packet packet: The NetfilterQueue Packet object which is received and can be transformed into Scapy IPv6()-packet.
+	   	This method extracts the value contained into the targeted field, accordingly to the sending mode used 
+	   	(i.e., interleaved or burst).
+	   	:param Packet packet: The NetfilterQueue Packet object.
 	   	'''
-		# Exfiltration not started
 		if self.number_of_repetitions_done < self.number_of_repetitions:
 			
 			if self.start_exf and self.stegotime: 
@@ -71,38 +68,30 @@ class Flow_Label_CC:
 				self.start_exf = pkt.fl == Flow_Label_CC.START_MAGIC_VALUE
 				if self.start_exf:
 					self.starttime_stegocommunication = time.perf_counter()
-					# print('start')
 
 			# Exfiltration started
 			else:
 				# If the previous packet was an escape sequence
 				if self.stegotime:
-
 					if self.dd:
 						# Unset delimiter detection Flag 
 						self.dd = False
 						# if the current packet is the end value => exfiltrate
 						if pkt.fl == Flow_Label_CC.END_MAGIC_VALUE:
 							self.exfiltrated_data.append(pkt.fl)
-							# print('char stuf')
 							self.sent_received_chunks += 1
 						# The previous packet gets interpreted as end value => stop exfiltration
 						else:
 							# Stop the Exfiltration
-							# print('end')
 							self.start_exf = False
 							self.endtime_stegocommunication = time.perf_counter()
 							# Erase the Ending Value
 							self.exfiltrated_data = self.exfiltrated_data[:-1]
 							self.sent_received_chunks -= 1
 							self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
-							# Increment the number of repitions
 							self.number_of_repetitions_done += 1
-							# Do the statistical evaluation
 							self.statistical_evaluation_received_packets()
-							# Write the csv-File
 							self.write_csv()
-							# Reset every necessary counter and list for the next experiment
 							self.received_packets = 0
 							self.sent_received_chunks = 0
 							self.clean_counter = 0
@@ -112,14 +101,12 @@ class Flow_Label_CC:
 							self.endtime_stegocommunication = 0.0
 							self.injection_exfiltration_time_sum = 0.0
 							if pkt.fl == Flow_Label_CC.START_MAGIC_VALUE:
-								# print('start')
 								self.starttime_stegocommunication = time.perf_counter()
 								self.start_exf = True
 
 					# Previous packet was not an escape sequence or ending value
 					else:
 						# Is an escape sequence detected?
-						# print('exf')
 						self.dd = pkt.fl == Flow_Label_CC.END_MAGIC_VALUE
 						self.exfiltrated_data.append(pkt.fl)
 						self.sent_received_chunks += 1
@@ -131,21 +118,17 @@ class Flow_Label_CC:
 				
 				else:
 					self.clean_counter += 1
-					# print('not exf')
 					self.stegotime = self.clean_counter % self.number_clean_packets == 0
 
 		self.received_packets += 1
 		packet.accept()
 
 	def inject(self, packet):
-
 		'''
 	   	The inject method of the sender, which is bound the the netfilter queue NETFILTERQUEUE_NUMBER.
-	   	This method injects the content of chunks into the flow label field of parameter packet.
-	   	The injected content is saved into self.exfiltrated_data. Then it increments the counter self.sent_received_chunks and self.received_packets by 1.
-	   	Then the payload of the altered packet is set. This is done considering the policy parameter.
-
-	   	:param Packet packet: The NetfilterQueue Packet object packet, where the exfiltrated data is injected into the flow label field.
+	   	This method injects the i-th chunks of the secret message (i.e., self.chunks[self.sent_received_chunks])
+	   	into the targeted field, accordingly to the sending mode used (i.e., interleaved or burst).
+	   	:param Packet packet: The NetfilterQueue Packet object packet.
 	   	'''
 		if self.number_of_repetitions_done < self.number_of_repetitions:
 			if self.stegotime:
@@ -153,13 +136,11 @@ class Flow_Label_CC:
 				pkt = IPv6(packet.get_payload())
 				if self.sent_received_chunks < len(self.chunks):
 					if self.first_packet:
-						# print('start')
 						self.starttime_stegocommunication = time.perf_counter()
 						pkt.fl = Flow_Label_CC.START_MAGIC_VALUE
 						self.first_packet = False
 						packet.set_payload(bytes(pkt))
 					else:
-						# print('inj')
 						pkt.fl = int(self.chunks[self.sent_received_chunks], 2)
 						self.exfiltrated_data.append(pkt.fl)
 						self.sent_received_chunks += 1
@@ -174,7 +155,6 @@ class Flow_Label_CC:
 					if not self.first_packet:
 						self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
 				else:
-					# print('end')
 					pkt.fl = Flow_Label_CC.END_MAGIC_VALUE
 					packet.set_payload(bytes(pkt))
 					self.endtime_stegocommunication = time.perf_counter()
@@ -190,11 +170,8 @@ class Flow_Label_CC:
 					self.injection_exfiltration_time_sum = 0
 					self.starttime_stegocommunication = 0
 					self.endtime_stegocommunication = 0
-					# print(str(self.exfiltrated_data))
 					self.exfiltrated_data = []
 			else:
-				
-				# print('not inj')
 				self.clean_counter += 1
 				if self.clean_counter % self.number_clean_packets == 0:
 					self.stegotime = True
@@ -205,8 +182,8 @@ class Flow_Label_CC:
 
 	def start_sending(self):
 		'''
-	   	Binds the inject method to the netfilter queue with its specific number and runs the callback function. If the user press Ctrl + c
-	   	the inject method is unbind.  
+	   	Binds the inject method to the netfilter queue with its specific number and runs the callback function. 
+	   	If the user press Ctrl + c the inject method is unbind.  
 	   	'''
 		self.nfqueue.bind(helper.NETFILTER_QUEUE_NUMBER, self.inject)
 		try:
@@ -217,8 +194,8 @@ class Flow_Label_CC:
 
 	def start_receiving(self):
 		'''
-	   	Binds the exfiltrate method to the netfilter queue with its specific number and runs the callback function. If the user press Ctrl + c
-	   	the inject method is unbind.  
+	   	Binds the exfiltrate method to the netfilter queue with its specific number and runs the callback function. 
+	   	If the user press Ctrl + c the inject method is unbind.  
 	   	'''
 		self.nfqueue.bind(helper.NETFILTER_QUEUE_NUMBER, self.exfiltrate)
 		try:
@@ -386,7 +363,7 @@ class Flow_Label_CC:
 		
 		print('')
 		print('##################### ANALYSIS RECEIVED DATA #####################')
-		print("- Number of Repetitions: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
+		print("- Number of Repetition: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
 		print("- Stego-packets received: " + str(self.sent_received_chunks) + "/" + str(len(self.chunks_int)))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")

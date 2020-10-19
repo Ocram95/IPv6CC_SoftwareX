@@ -7,10 +7,6 @@ import os
 TITLE_APPEND_IP6TABLES = '##### APPENDING IP6TABLES RULE #####'
 TITLE_DELETE_IP6TABLES = '##### DELETING IP6TABLES RULE #####'
 
-SECRET_PHRASE1 = "SIMARGL is one of the greatest EU-Projects ever!"
-SECRET_PHRASE2 = "SIMARGL is the best!"
-SECRET_PHRASE3 = "We will conquer the world with our CCs!"
-
 PRESHARED_SEED = "SIMARGL"
 
 BEGIN_RANGE_RANDOM_INT = 1
@@ -18,16 +14,12 @@ END_RANGE_RANDOM_INT = 10000
 
 NETFILTER_QUEUE_NUMBER = 1
 
-SOURCE_IPv6_ADDRESS = "2a00:1620:80:8::a497" # CNR Server
-DESTINATION_IPv6_ADDRESS = "2a01:4f8:140:51c1::2" # SIMARGL Server
+SOURCE_IPv6_ADDRESS = "" 
+DESTINATION_IPv6_ADDRESS = ""
 
 
 USED_INDICES_OF_HASH_FLOW_LABEL = [0,1,2,3,4]
 USED_INDICES_OF_HASH_TRAFFIC_CLASS = [0,1]
-
-# Variable needed only for payload_length_CC
-MAX_MTU_LENGTH_IN_BITS = 1500
-MAX_PAYLOAD_LENGTH = 1480
 
 PROTOCOL_HEADER_LENGTHS_IN_BITS = {
 	"IPv4": 20, 
@@ -67,18 +59,6 @@ TCP_FLAGS = {
 	"CONG": 128,
 	"NONCE": 256
 }
-
-#new line
-def calculate_all_signature(packet_list):
-	signature_list = []
-	final_signature_list = []
-	random.seed(PRESHARED_SEED)
-
-	for x in range(len(packet_list)):
-		signature_list.append(hashlib.md5(str(random.randint(BEGIN_RANGE_RANDOM_INT, END_RANGE_RANDOM_INT)).encode('utf-8')).hexdigest())
-	for y in range(len(signature_list)):
-		final_signature_list.append(int(signature_list[y][:2], 16))
-	return final_signature_list
 
 def read_binary_file_for_n_packets_and_return_chunks(path_to_binary_file, n, field_length_in_bits):
 
@@ -200,47 +180,3 @@ def delete_ip6tables_rule(sender):
 	p = subprocess.Popen(args)
 	stdout, stderr = p.communicate()
 	print('')
-
-# def start_iperf3_server():
-# 	args = ['iperf3', '-s', '-B', DESTINATION_IPv6_ADDRESS]
-# 	p = subprocess.Popen(args, shell=False, stdout=DEVNULL)
-	
-# 	print("\n")
-# 	for y in range(len('#' + IPERF3_START_MESSAGE + '(PID: ' + str(p.pid) + ')#')):
-# 		print("#", end='')
-# 	print('\n#' + IPERF3_START_MESSAGE + '(PID: ' + str(p.pid) + ')#')
-# 	for y in range(len('#' + IPERF3_START_MESSAGE + '(PID: ' + str(p.pid) + ')#')):
-# 		print("#", end='')
-# 	print("\n")
-
-# def kill_iperf3_server(pid):
-# 	args = ['kill', str(pid)]
-# 	subprocess.Popen(args, shell=False, stdout=DEVNULL)
-
-# 	print("\n")
-# 	for y in range(len('#' + IPERF3_KILL_MESSAGE + '(PID: ' + str(pid) + ')#')):
-# 		print("#", end='')
-# 	print('\n#' + IPERF3_KILL_MESSAGE + '(PID: ' + str(pid) + ')#')
-# 	for y in range(len('#' + IPERF3_KILL_MESSAGE + '(PID: ' + str(pid) + ')#')):
-# 		print("#", end='')
-# 	print("\n")
-
-# def start_iperf3_client(sending_time):
-# 	args = ['iperf3', '-c', DESTINATION_IPv6_ADDRESS, '-t', str(sending_time)]
-# 	subprocess.Popen(args)
-
-# if __name__ == "__main__":
-
-# 	filepath = sys.argv[1]
-# 	number_of_packets = int(sys.argv[2])
-# 	field_length_in_bits = int(sys.argv[3])
-# 	print(read_binary_file_for_n_packets_and_return_chunks(filepath, number_of_packets, field_length_in_bits))
-
-	# buf = read_binary_file_and_return_chunks(sys.argv[1], 10)
-	# print(buf)
-	# start_iperf3_server()
-	# start_iperf3_client(10)
-	# kill_iperf3_server(str(11323))
-	# print(get_md5_signature_at_indices(2, [0,3]))
-	# append_ip6tables_rule(sender=True)
-	# delete_ip6tables_rule(sender=True)
