@@ -13,24 +13,24 @@ def get_comma_separated_args(option, opt, value, parser):
 
 class Hop_Limit_CC:
 
-	def __init__(self, filepath, chunks, number_of_packets, role, number_clean_packets, length_stego_packets):
+	def __init__(self, filepath, chunks, stegopackets, role, consecutive_clean, consecutive_stego):
 		'''
 		Constructor for sender and receiver of a Hop Limit cc.
 		:param filepath: The path to the message to hide. 
 		:param chunks: A string list containing the message to hide splitted in chunks.
-		:param number_of_packets: Number of stego packets to consider.
+		:param stegopackets: Number of stego packets to consider.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param number_clean_packets: The length of the burst of non-stego packets.
-		:param length_stego_packets: The lenght of the burst of stego packets
+		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks 				
-		self.number_of_packets = number_of_packets
+		self.stegopackets = stegopackets
 		self.actual_number = 0
 		self.role = role
 		self.filepath = filepath
 
-		self.number_clean_packets = number_clean_packets
-		self.length_stego_packets = length_stego_packets
+		self.consecutive_clean = consecutive_clean
+		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
 
@@ -56,7 +56,7 @@ class Hop_Limit_CC:
 		if self.number_of_repetitions_done < self.number_of_repetitions: 
 			tmp1 = time.perf_counter()
 			pkt = IPv6(packet.get_payload())
-			if self.sent_received_chunks < self.number_of_packets[self.actual_number]:
+			if self.sent_received_chunks < self.stegopackets[self.actual_number]:
 
 				if self.sent_received_chunks == 0:
 					self.starttime_stegocommunication = time.perf_counter()
@@ -74,12 +74,12 @@ class Hop_Limit_CC:
 					
 					self.sent_received_chunks += 1
 
-					if self.length_stego_packets > 0:
-						self.stegotime = self.sent_received_chunks % self.length_stego_packets != 0
+					if self.consecutive_stego > 0:
+						self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
 
 				else:
 					self.clean_counter += 1
-					self.stegotime = self.clean_counter % self.number_clean_packets == 0
+					self.stegotime = self.clean_counter % self.consecutive_clean == 0
 			else:
 
 				self.endtime_stegocommunication = time.perf_counter()
@@ -96,9 +96,9 @@ class Hop_Limit_CC:
 		
 		else:
 			
-			if self.actual_number < len(self.number_of_packets) - 1:
+			if self.actual_number < len(self.stegopackets) - 1:
 				self.actual_number += 1
-				self.chunks = helper.read_binary_file_for_n_packets_and_return_chunks(self.filepath, self.number_of_packets[self.actual_number], 1)
+				self.chunks = helper.read_binary_file_for_n_packets_and_return_chunks(self.filepath, self.stegopackets[self.actual_number], 1)
 				self.print_start_message()
 				self.number_of_repetitions_done = 0
 
@@ -115,7 +115,7 @@ class Hop_Limit_CC:
 		if self.number_of_repetitions_done < self.number_of_repetitions: 
 			tmp1 = time.perf_counter()		
 			pkt = IPv6(packet.get_payload())
-			if self.sent_received_chunks < self.number_of_packets[self.actual_number]:
+			if self.sent_received_chunks < self.stegopackets[self.actual_number]:
 
 				if self.sent_received_chunks == 0:
 					self.starttime_stegocommunication = time.perf_counter()
@@ -128,11 +128,11 @@ class Hop_Limit_CC:
 					
 					self.sent_received_chunks += 1
 
-					if self.length_stego_packets > 0:
-						self.stegotime = self.sent_received_chunks % self.length_stego_packets != 0
+					if self.consecutive_stego > 0:
+						self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
 				else:
 					self.clean_counter += 1
-					self.stegotime = self.clean_counter % self.number_clean_packets == 0
+					self.stegotime = self.clean_counter % self.consecutive_clean == 0
 			else:
 
 				self.endtime_stegocommunication = time.perf_counter()
@@ -151,9 +151,9 @@ class Hop_Limit_CC:
 
 		else:
 
-			if self.actual_number < len(self.number_of_packets) - 1:
+			if self.actual_number < len(self.stegopackets) - 1:
 				self.actual_number += 1
-				self.chunks = helper.read_binary_file_for_n_packets_and_return_chunks(self.filepath, self.number_of_packets[self.actual_number], 1)
+				self.chunks = helper.read_binary_file_for_n_packets_and_return_chunks(self.filepath, self.stegopackets[self.actual_number], 1)
 				self.print_start_message()
 				self.number_of_repetitions_done = 0
 
@@ -161,7 +161,7 @@ class Hop_Limit_CC:
 	
 	def write_csv(self):
 		
-		filename="hop_limit_cc_" + self.filepath.replace("../", "", 1) + "_number_of_packets_" + str(self.number_of_packets[self.actual_number]) + "_role_" + self.role + "_clean_packets_" + str(self.number_clean_packets) + "_number_stegopackets_" + str(self.length_stego_packets) + ".csv"
+		filename="hop_limit_cc_" + self.filepath.replace("../", "", 1) + "_stegopackets_" + str(self.stegopackets[self.actual_number]) + "_role_" + self.role + "_clean_packets_" + str(self.consecutive_clean) + "_number_stegopackets_" + str(self.consecutive_stego) + ".csv"
 		csv_file = Path(filename)
 		file_existed=csv_file.is_file()
 
@@ -261,26 +261,26 @@ class Hop_Limit_CC:
 	def print_start_message(self):
 		print('')
 		if self.role == "sender":
-			print('################## NUMBER STEGO PACKETS HOP LIMIT CC SENDER ##################')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('################## NUMBER STEGO PACKETS HOP LIMIT CC RECEIVER ##################')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		print('- Exfiltrated File: ' + self.filepath)
-		if self.number_clean_packets > 0 and self.length_stego_packets > 0:
+		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
-				for y in range(self.length_stego_packets):
+				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.number_clean_packets):
+				for y in range(self.consecutive_clean):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.number_clean_packets))		
-			print('- Length Stego Packets: ' + str(self.length_stego_packets))		
+			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")	
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
-			print('################## NUMBER STEGO PACKETS HOP LIMIT CC SENDER ##################')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('################## NUMBER STEGO PACKETS HOP LIMIT CC RECEIVER ##################')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('')
 		if self.role == "sender":
 			print('Injection in covert channel is started...')
@@ -295,7 +295,7 @@ class Hop_Limit_CC:
 		print('')
 		print('##################### ANALYSIS SENT DATA #####################')
 		print("- Number of Repetitions: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
-		print("- Sent Chunks: " + str(self.sent_received_chunks) + "/" + str(self.number_of_packets[self.actual_number]))
+		print("- Sent Chunks: " + str(self.sent_received_chunks) + "/" + str(self.stegopackets[self.actual_number]))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Injection Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
 		print("- Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
@@ -349,7 +349,7 @@ class Hop_Limit_CC:
 		print('')
 		print('##################### ANALYSIS RECEIVED DATA #####################')
 		print("- Number of Repetition: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
-		print("- Received Chunks: " + str(self.sent_received_chunks) + "/" + str(self.number_of_packets[self.actual_number]))
+		print("- Received Chunks: " + str(self.sent_received_chunks) + "/" + str(self.stegopackets[self.actual_number]))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
 		print("- Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")

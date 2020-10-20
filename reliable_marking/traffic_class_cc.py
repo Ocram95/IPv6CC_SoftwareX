@@ -225,9 +225,9 @@ class Traffic_Class_CC:
 
 		print('')
 		if self.role == "sender":
-			print('################## Mode: Signature Implementation TCP | CC: Traffic Class | Side: Covert Sender ##################')
+			print('########## Mode: Reliable Marking | CC: Traffic Class | Side: Covert Sender ##########')
 		else:
-			print('################## Mode: Signature Implementation TCP | CC: Traffic Class | Side: Covert Receiver ##################')
+			print('########## Mode: Reliable Marking | CC: Traffic Class | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		print('- Signature in field: Flow Label')			
 		print('- Exfiltrated File: ' + self.filepath)
@@ -243,9 +243,9 @@ class Traffic_Class_CC:
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")		
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
-			print('################## Mode: Signature Implementation TCP | CC: Traffic Class | Side: Covert Sender ##################')
+			print('########## Mode: Reliable Marking | CC: Traffic Class | Side: Covert Sender ##########')
 		else:
-			print('################## Mode: Signature Implementation TCP | CC: Traffic Class | Side: Covert Receiver ##################')
+			print('########## Mode: Reliable Marking | CC: Traffic Class | Side: Covert Receiver ##########')
 		print('')
 		if self.role == "sender":
 			print('Injection using the covert channel has started...')

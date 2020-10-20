@@ -211,9 +211,9 @@ class Hop_Limit_CC:
 	def print_start_message(self):
 		print('')
 		if self.role == "sender":
-			print('################## SIGNATURE HOP LIMIT CC SENDER ##################')
+			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('################## SIGNATURE HOP LIMIT CC RECEIVER ##################')
+			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		print('- Signature in field: Flow Label')			
 		print('- Exfiltrated File: ' + self.filepath)
@@ -229,9 +229,9 @@ class Hop_Limit_CC:
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")	
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
-			print('################## SIGNATURE HOP LIMIT CC SENDER ##################')
+			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('################## SIGNATURE HOP LIMIT CC RECEIVER ##################')
+			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('')
 		if self.role == "sender":
 			print('Injection in covert channel is started...')

@@ -280,9 +280,9 @@ class Traffic_Class_CC:
 
 		print('')
 		if self.role == "sender":
-			print('################## MAGIC VALUE TRAFFIC CLASS CC SENDER ##################')
+			print('########## Mode: Start/Stop | CC: Traffic Class | Side: Covert Sender ##########')
 		else:
-			print('################## MAGIC VALUE TRAFFIC CLASS CC RECEIVER ##################')
+			print('########## Mode: Start/Stop | CC: Traffic Class | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		if self.number_clean_packets > 0 and self.length_stego_packets > 0:
 			buf = ""
@@ -296,9 +296,9 @@ class Traffic_Class_CC:
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")		
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
-			print('################## MAGIC VALUE TRAFFIC CLASS CC SENDER ##################')
+			print('########## Mode: Start/Stop | CC: Traffic Class | Side: Covert Sender ##########')
 		else:
-			print('################## MAGIC VALUE TRAFFIC CLASS CC RECEIVER ##################')
+			print('########## Mode: Start/Stop | CC: Traffic Class | Side: Covert Receiver ##########')
 		print('')
 		if self.role == "sender":
 			print('Injection in covert channel is started...')
