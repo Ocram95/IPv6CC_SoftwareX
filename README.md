@@ -27,7 +27,7 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 - [Usage](#Usage)
 
 ## Architecture
-![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.pdf)
+![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png)
 
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant while 
 the additional script, i.e., the ```helper.py``` script contains functions shared among all channels.
@@ -80,6 +80,7 @@ NUMBER_OF_REPETITIONS = "20"
 ```
 
 Let's consider now a simple example on how it works, specifically using the Flow Label covert channel in the naive mode: <br/>
+
 ```sudo python3 flow_label_cc.py -r sender -f ../test5000 -n 250 -p 10 -l 5``` <br/>
 
 When running the above command a sender application is instantiated. It will inject the ../test5000 file as the secret information into
@@ -87,6 +88,7 @@ the Flow Label field with the following pattern: 10 non-stego packets alternated
 entirety, reaching 250 stego-packets. <br/>
 
 ```sudo python3 flow_label_cc.py -r receiver -f ../test5000 -n 250 -p 10 -l 5``` <br/>
+
 The above command, instead, is needed to run the receiver with the same parameters of the sender.
 
 At the end of each repetition, a log reports the output and the obtained performances, both for covert sender and receiver role:

@@ -12,21 +12,21 @@ class Hop_Limit_CC:
 
 	END_SIGNATURE = 524288
 
-	def __init__(self, filepath, chunks, role, number_clean_packets, length_stego_packets):
+	def __init__(self, filepath, chunks, role, consecutive_clean, consecutive_stego):
 		'''
 		Constructor for sender and receiver of a Hop Limit cc.
 		:param filepath: The path to the message to hide. 
 		:param chunks: A string list containing the message to hide splitted in chunks.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param number_clean_packets: The length of the burst of non-stego packets.
-		:param length_stego_packets: The lenght of the burst of stego packets
+		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks 				
 		self.role = role
 		self.filepath = filepath
 
-		self.number_clean_packets = number_clean_packets
-		self.length_stego_packets = length_stego_packets
+		self.consecutive_clean = consecutive_clean
+		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
 		#self.sleep = False
@@ -97,11 +97,11 @@ class Hop_Limit_CC:
 	
 							self.sent_received_chunks += 1
 
-							if self.length_stego_packets > 0:
-								self.stegotime = self.sent_received_chunks % self.length_stego_packets != 0
+							if self.consecutive_stego > 0:
+								self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
 						else:
 							self.clean_counter += 1
-							self.stegotime = self.clean_counter % self.number_clean_packets == 0
+							self.stegotime = self.clean_counter % self.consecutive_clean == 0
 
 						# Calculate the next expected value						
 						self.next_expected_seq += len(pkt[TCP].payload)
@@ -142,11 +142,11 @@ class Hop_Limit_CC:
 					else:
 						self.exfiltrated_data.append('0')
 					self.sent_received_chunks += 1
-					if self.length_stego_packets > 0:
-						self.stegotime = self.sent_received_chunks % self.length_stego_packets != 0
+					if self.consecutive_stego > 0:
+						self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
 			else:
 				self.clean_counter += 1
-				self.stegotime = self.clean_counter % self.number_clean_packets == 0
+				self.stegotime = self.clean_counter % self.consecutive_clean == 0
 			if pkt.fl == Hop_Limit_CC.END_SIGNATURE:
 				self.endtime_stegocommunication = time.perf_counter()
 				self.stegotime = True
@@ -163,7 +163,7 @@ class Hop_Limit_CC:
 	
 	def write_csv(self):
 		
-		filename="hop_limit_cc_" + self.filepath.replace("../", "", 1) + "_role_" + self.role + "_clean_packets_" + str(self.number_clean_packets) + "_number_stegopackets_" + str(self.length_stego_packets) + ".csv"
+		filename="hop_limit_cc_" + self.filepath.replace("../", "", 1) + "_role_" + self.role + "_clean_packets_" + str(self.consecutive_clean) + "_number_stegopackets_" + str(self.consecutive_stego) + ".csv"
 		csv_file = Path(filename)
 		file_existed=csv_file.is_file()
 
@@ -242,15 +242,15 @@ class Hop_Limit_CC:
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		print('- Signature in field: Flow Label')			
 		print('- Exfiltrated File: ' + self.filepath)
-		if self.number_clean_packets > 0 and self.length_stego_packets > 0:
+		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
-				for y in range(self.length_stego_packets):
+				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.number_clean_packets):
+				for y in range(self.consecutive_clean):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.number_clean_packets))		
-			print('- Length Stego Packets: ' + str(self.length_stego_packets))		
+			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")	
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":

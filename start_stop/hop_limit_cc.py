@@ -15,13 +15,13 @@ class Hop_Limit_CC:
 	END_MAGIC_VALUE = 150
 	#-------------- MAGIC VALUES --------------#
 
-	def __init__(self, chunks, role, number_clean_packets, length_stego_packets):
+	def __init__(self, chunks, role, consecutive_clean, consecutive_stego):
 		'''
 		Constructor for sender and receiver of a Hop Limit cc.
 		:param chunks: A string list containing the message to hide splitted in chunks.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param number_clean_packets: The length of the burst of non-stego packets.
-		:param length_stego_packets: The lenght of the burst of stego packets
+		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks
 		self.chunks_int = [int(x,2) for x in self.chunks]
@@ -39,8 +39,8 @@ class Hop_Limit_CC:
 		self.number_of_repetitions = 20
 		self.number_of_repetitions_done = 0
 
-		self.number_clean_packets = number_clean_packets
-		self.length_stego_packets = length_stego_packets
+		self.consecutive_clean = consecutive_clean
+		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
 
@@ -88,12 +88,12 @@ class Hop_Limit_CC:
 						if hlim < 64:
 							self.exfiltrated_data.append(0)
 					self.sent_received_chunks += 1
-					if self.length_stego_packets > 0:
-						if self.sent_received_chunks % self.length_stego_packets == 0:
+					if self.consecutive_stego > 0:
+						if self.sent_received_chunks % self.consecutive_stego == 0:
 							self.stegotime = False
 				else:
 					self.clean_counter += 1
-					if self.clean_counter % self.number_clean_packets == 0:
+					if self.clean_counter % self.consecutive_clean == 0:
 						self.stegotime = True
 						self.clean_counter = 0
 		
@@ -131,14 +131,14 @@ class Hop_Limit_CC:
 						self.sent_received_chunks += 1
 						packet.set_payload(bytes(pkt))
 
-					if self.length_stego_packets > 0:
-						if self.sent_received_chunks % self.length_stego_packets == 0:
+					if self.consecutive_stego > 0:
+						if self.sent_received_chunks % self.consecutive_stego == 0:
 							self.stegotime = False
 						else:
 							self.stegotime = True
 				else:
 					self.clean_counter += 1
-					if self.clean_counter % self.number_clean_packets == 0:
+					if self.clean_counter % self.consecutive_clean == 0:
 						self.stegotime = True
 						self.clean_counter = 0
 			else:
@@ -268,15 +268,15 @@ class Hop_Limit_CC:
 		else:
 			print('########## Mode: Start/Stop | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
-		if self.number_clean_packets > 0 and self.length_stego_packets > 0:
+		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
-				for y in range(self.length_stego_packets):
+				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.number_clean_packets):
+				for y in range(self.consecutive_clean):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.number_clean_packets))		
-			print('- Length Stego Packets: ' + str(self.length_stego_packets))		
+			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")		
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
