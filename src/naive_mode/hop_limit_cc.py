@@ -8,34 +8,38 @@ from pathlib import Path
 sys.path.insert(1, '../')
 import helper
 
+def get_comma_separated_args(option, opt, value, parser):
+	setattr(parser.values, option.dest, value.split(','))
+
 class Hop_Limit_CC:
 
-	END_SIGNATURE = 524288
-
-	def __init__(self, filepath, chunks, role, consecutive_clean, consecutive_stego):
+	def __init__(self, filepath, chunks, stegopackets, role, consecutive_nonstego, consecutive_stego):
 		'''
 		Constructor for sender and receiver of a Hop Limit cc.
 		:param filepath: The path to the message to hide. 
 		:param chunks: A string list containing the message to hide splitted in chunks.
+		:param stegopackets: Number of stego packets to consider.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_nonstego: The length of the burst of non-stego packets.
 		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks 				
+		self.stegopackets = stegopackets
+		self.actual_number = 0
 		self.role = role
 		self.filepath = filepath
 
-		self.consecutive_clean = consecutive_clean
+		self.consecutive_nonstego = consecutive_nonstego
 		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
-		#self.sleep = False
 
 		self.number_of_repetitions = 20
 		self.number_of_repetitions_done = 0
+		self.hoplimit_delta = 20
 
 		self.sent_received_chunks = 0
-		self.nfqueue = NetfilterQueue()
+		self.nfqueue = NetfilterQueue()	
 		self.exfiltrated_data = []
 
 		# ------------------- MEASUREMENT VARIABLES ------------------- #
@@ -50,26 +54,25 @@ class Hop_Limit_CC:
 	   	into the targeted field, accordingly to the sending mode used (i.e., interleaved or burst).
 	   	:param Packet packet: The NetfilterQueue Packet object packet.
 	   	'''
-	   	# tocheck: maybe the sleep necessary for HL: it can't handle the big amount of packets in the queue of this cc
-		# if self.sleep:
-		# 	time.sleep(1)
-		# 	self.sleep = False
-		if self.number_of_repetitions_done < self.number_of_repetitions:
+		if self.number_of_repetitions_done < self.number_of_repetitions: 
 			tmp1 = time.perf_counter()
 			pkt = IPv6(packet.get_payload())
-			if self.sent_received_chunks < len(self.chunks):
+			if self.sent_received_chunks < self.stegopackets[self.actual_number]:
+
 				if self.sent_received_chunks == 0:
 					self.starttime_stegocommunication = time.perf_counter()
 
 				if self.stegotime:
-					pkt.fl = helper.get_md5_signature_at_indices(self.sent_received_chunks, helper.USED_INDICES_OF_HASH_FLOW_LABEL)
+
 					if self.chunks[self.sent_received_chunks] == '1':
-						pkt.hlim += 20
+						pkt.hlim += self.hoplimit_delta
 						self.exfiltrated_data.append('1')
 					else:
-						pkt.hlim -= 20
+						pkt.hlim -= self.hoplimit_delta
 						self.exfiltrated_data.append('0')
-										
+					
+					packet.set_payload(bytes(pkt))
+					
 					self.sent_received_chunks += 1
 
 					if self.consecutive_stego > 0:
@@ -77,22 +80,29 @@ class Hop_Limit_CC:
 
 				else:
 					self.clean_counter += 1
-					self.stegotime = self.clean_counter % self.consecutive_clean == 0
+					self.stegotime = self.clean_counter % self.consecutive_nonstego == 0
 			else:
-				pkt.fl = Hop_Limit_CC.END_SIGNATURE
+
 				self.endtime_stegocommunication = time.perf_counter()
 				self.stegotime = True
+				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
 				self.number_of_repetitions_done += 1
 				self.statistical_evaluation_sent_packets()
 				self.write_csv()
 				self.injection_exfiltration_time_sum = 0
 				self.sent_received_chunks = 0
 				self.exfiltrated_data = []
-				#self.sleep = True
-
-			packet.set_payload(bytes(pkt))
 			if self.sent_received_chunks != 0:
 				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
+		
+		else:
+			
+			if self.actual_number < len(self.stegopackets) - 1:
+				self.actual_number += 1
+				self.chunks = helper.read_binary_file_for_n_packets_and_return_chunks(self.filepath, self.stegopackets[self.actual_number], 1)
+				self.print_start_message()
+				self.number_of_repetitions_done = 0
+
 		packet.accept()
 
 
@@ -104,40 +114,55 @@ class Hop_Limit_CC:
 	   	:param Packet packet: The NetfilterQueue Packet object.
 	   	'''
 		if self.number_of_repetitions_done < self.number_of_repetitions: 
-			tmp1 = time.perf_counter()
+			tmp1 = time.perf_counter()		
 			pkt = IPv6(packet.get_payload())
-			if self.stegotime:
-				if pkt.fl == helper.get_md5_signature_at_indices(self.sent_received_chunks, helper.USED_INDICES_OF_HASH_FLOW_LABEL):
-					if self.sent_received_chunks == 0:
-						self.starttime_stegocommunication = time.perf_counter()
+			if self.sent_received_chunks < self.stegopackets[self.actual_number]:
+
+				if self.sent_received_chunks == 0:
+					self.starttime_stegocommunication = time.perf_counter()
+
+				if self.stegotime:
 					if pkt.hlim > 64:
 						self.exfiltrated_data.append('1')
 					else:
 						self.exfiltrated_data.append('0')
+					
 					self.sent_received_chunks += 1
 
 					if self.consecutive_stego > 0:
 						self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
+				else:
+					self.clean_counter += 1
+					self.stegotime = self.clean_counter % self.consecutive_nonstego == 0
 			else:
-				self.clean_counter += 1
-				self.stegotime = self.clean_counter % self.consecutive_clean == 0
-			if pkt.fl == Hop_Limit_CC.END_SIGNATURE:
+
 				self.endtime_stegocommunication = time.perf_counter()
 				self.stegotime = True
+				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
 				self.number_of_repetitions_done += 1
 				self.statistical_evaluation_received_packets()
 				self.write_csv()
 				self.injection_exfiltration_time_sum = 0
 				self.sent_received_chunks = 0
 				self.exfiltrated_data = []
-				
+				# time.sleep(1)
+
 			if self.sent_received_chunks != 0:
-				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1				
+				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
+
+		else:
+
+			if self.actual_number < len(self.stegopackets) - 1:
+				self.actual_number += 1
+				self.chunks = helper.read_binary_file_for_n_packets_and_return_chunks(self.filepath, self.stegopackets[self.actual_number], 1)
+				self.print_start_message()
+				self.number_of_repetitions_done = 0
+
 		packet.accept()
 	
 	def write_csv(self):
 		
-		filename="hop_limit_cc_" + self.filepath.replace("../", "", 1) + "_role_" + self.role + "_clean_packets_" + str(self.consecutive_clean) + "_number_stegopackets_" + str(self.consecutive_stego) + ".csv"
+		filename="hop_limit_cc_" + self.filepath.replace("../", "", 1) + "_stegopackets_" + str(self.stegopackets[self.actual_number]) + "_role_" + self.role + "_clean_packets_" + str(self.consecutive_nonstego) + "_number_stegopackets_" + str(self.consecutive_stego) + ".csv"
 		csv_file = Path(filename)
 		file_existed=csv_file.is_file()
 
@@ -156,29 +181,55 @@ class Hop_Limit_CC:
 					round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2), \
 					round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)])  			
 			else:
+
 				failures = 0
 				index_first_failure = -1 
 
-				# Failure Calculation via Index 
-				for x in range(len(self.exfiltrated_data)):
-					if self.exfiltrated_data[x] != self.chunks[x]:
-						failures += 1
+				# Count the failures
+				if len(self.exfiltrated_data) <= len(self.chunks):
+					for x in range(len(self.exfiltrated_data)):
+						if self.exfiltrated_data[x] != self.chunks[x]:
+							failures += 1
+				else:
+					for x in range(len(self.chunks)):
+						if self.exfiltrated_data[x] != self.chunks[x]:
+							failures += 1
+				failures += abs(len(self.exfiltrated_data) - len(self.chunks))
 
-				# Determine first index of failure for Succesfully Transmitt
-				for x in range(len(self.exfiltrated_data)):
-					if self.exfiltrated_data[x] != self.chunks[x]:
-						index_first_failure = x
-						break
+				if failures != 0:
+					# Receive less than expected => first failure can happen in the middle or after the last index
+					if len(self.exfiltrated_data) < len(self.chunks):
+						for x in range(len(self.exfiltrated_data)):
+							if self.exfiltrated_data[x] != self.chunks[x]:
+								index_first_failure = x
+								break
+						if index_first_failure == -1:
+							index_first_failure = len(self.exfiltrated_data)
+					# Receive exactly the amount which is expected => index must be in the middle
+					elif len(self.exfiltrated_data) == len(self.chunks):
+						for x in range(len(self.chunks)):
+							if self.exfiltrated_data[x] != self.chunks[x]:
+								index_first_failure = x
+								break
+					else:
+					# Receive more than expected => first failure can happen in the middle or after the last index
+						for x in range(len(self.chunks)):
+							if self.exfiltrated_data[x] != self.chunks[x]:
+								index_first_failure = x
+								break
+						if index_first_failure == -1:
+							index_first_failure = len(self.chunks)
 
 				if index_first_failure == -1:
 					index_first_failure = self.sent_received_chunks
-					
+
 				writer.writerow([self.sent_received_chunks, \
 					round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2), \
 					round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2), \
 					round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2), \
 					failures, \
 					round(failures/self.sent_received_chunks, 2), \
+					# round(100 - ((failures/self.sent_received_chunks) * 100), 2)])
 					round((index_first_failure/self.sent_received_chunks) * 100, 2)])
 
 
@@ -211,27 +262,26 @@ class Hop_Limit_CC:
 	def print_start_message(self):
 		print('')
 		if self.role == "sender":
-			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Sender ##########')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Receiver ##########')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
-		print('- Signature in field: Flow Label')			
 		print('- Exfiltrated File: ' + self.filepath)
-		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
+		if self.consecutive_nonstego > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
 				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.consecutive_clean):
+				for y in range(self.consecutive_nonstego):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Clean Packets: ' + str(self.consecutive_nonstego))		
 			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")	
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
-			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Sender ##########')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('########## Mode: Packet Marking | CC: Hop Limit | Side: Covert Receiver ##########')
+			print('########## Mode: Naive Mode | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('')
 		if self.role == "sender":
 			print('Injection in covert channel is started...')
@@ -245,8 +295,8 @@ class Hop_Limit_CC:
 		
 		print('')
 		print('##################### ANALYSIS SENT DATA #####################')
-		print("- Number of Repetition: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
-		print("- Sent Chunks: " + str(self.sent_received_chunks) + "/" + str(len(self.chunks)))
+		print("- Number of Repetitions: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
+		print("- Sent Chunks: " + str(self.sent_received_chunks) + "/" + str(self.stegopackets[self.actual_number]))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Injection Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
 		print("- Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
@@ -259,17 +309,40 @@ class Hop_Limit_CC:
 		failures = 0
 		index_first_failure = -1 
 
-		# Failure Calculation via Index 
-		for x in range(len(self.exfiltrated_data)):
-			if self.exfiltrated_data[x] != self.chunks[x]:
-				failures += 1
+		# Count the failures
+		if len(self.exfiltrated_data) <= len(self.chunks):
+			for x in range(len(self.exfiltrated_data)):
+				if self.exfiltrated_data[x] != self.chunks[x]:
+					failures += 1
+		else:
+			for x in range(len(self.chunks)):
+				if self.exfiltrated_data[x] != self.chunks[x]:
+					failures += 1
+		failures += abs(len(self.exfiltrated_data) - len(self.chunks))
 
-		# Failure Calculation 1st Index 
-		
-		for x in range(len(self.exfiltrated_data)):
-			if self.exfiltrated_data[x] != self.chunks[x]:
-				index_first_failure = x
-				break
+		if failures != 0:
+			# Receive less than expected => first failure can happen in the middle or after the last index
+			if len(self.exfiltrated_data) < len(self.chunks):
+				for x in range(len(self.exfiltrated_data)):
+					if self.exfiltrated_data[x] != self.chunks[x]:
+						index_first_failure = x
+						break
+				if index_first_failure == -1:
+					index_first_failure = len(self.exfiltrated_data)
+			# Receive exactly the amount which is expected => index must be in the middle
+			elif len(self.exfiltrated_data) == len(self.chunks):
+				for x in range(len(self.chunks)):
+					if self.exfiltrated_data[x] != self.chunks[x]:
+						index_first_failure = x
+						break
+			else:
+			# Receive more than expected => first failure can happen in the middle or after the last index
+				for x in range(len(self.chunks)):
+					if self.exfiltrated_data[x] != self.chunks[x]:
+						index_first_failure = x
+						break
+				if index_first_failure == -1:
+					index_first_failure = len(self.chunks)
 
 		if index_first_failure == -1:
 			index_first_failure = self.sent_received_chunks
@@ -277,13 +350,14 @@ class Hop_Limit_CC:
 		print('')
 		print('##################### ANALYSIS RECEIVED DATA #####################')
 		print("- Number of Repetition: " + str(self.number_of_repetitions_done) + "/" + str(self.number_of_repetitions))
-		print("- Received Chunks: " + str(self.sent_received_chunks) + "/" + str(len(self.chunks)))
+		print("- Received Chunks: " + str(self.sent_received_chunks) + "/" + str(self.stegopackets[self.actual_number]))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
 		print("- Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
 		print("- Exfiltrated data == Chunks: " + str(self.exfiltrated_data == self.chunks) + " (" + str(failures) + " Failures)")
 		print("- Error Rate: " + str(round(failures/self.sent_received_chunks, 2)) + " Failures/Packet")
 		print("- Successfully transmitted Message: " + str(round((index_first_failure/self.sent_received_chunks) * 100, 2)) + "%")
+		# print("- Successfully transmitted Message: " + str(round(100 - ((failures/self.sent_received_chunks) * 100), 2)) + "%")
 		print('##################### ANALYSIS RECEIVED DATA #####################')
 		print('')
 
@@ -302,6 +376,15 @@ class Hop_Limit_CC:
 		dest='role')
 
 		parser.add_option(
+		'-n',
+		'--stegopackets',
+		help='specify the number of packets which shall be exfiltrated: number > 0',
+		action='callback',
+		callback=get_comma_separated_args,
+		type='string',
+		dest='stegopackets')
+
+		parser.add_option(
 		'-f',
 		'--file',
 		help='specify the file which shall be read and exfiltrated',
@@ -311,12 +394,12 @@ class Hop_Limit_CC:
 
 		parser.add_option(
 		'-p',
-		'--consecutive_clean',
+		'--consecutive_nonstego',
 		help='specify the number of clean packets inserted before/after stegopackets (default: 0)',
 		default=0,
 		action='store',
 		type='int',
-		dest='consecutive_clean')
+		dest='consecutive_nonstego')
 
 		parser.add_option(
 		'-l',
@@ -328,6 +411,14 @@ class Hop_Limit_CC:
 		dest='consecutive_stego')
 
 		settings, args = parser.parse_args(argv)
+		
+		settings.stegopackets = [int(x) for x in settings.stegopackets]
+
+		if any(n < 1 for n in settings.stegopackets):
+			raise ValueError("The List of numbers contains at least one element < 1!")
+
+		if not settings.stegopackets:
+			raise ValueError("The List of numbers which shall be exfiltrated needs at least one positive element!")
 
 		if settings.filepath is None:
 			raise ValueError("ValueError: filepath must be specified!")
@@ -335,9 +426,9 @@ class Hop_Limit_CC:
 		if settings.role not in ["sender", "receiver"]:
 			raise ValueError("ValueError: role can be only sender or receiver!")
 
-		if settings.consecutive_clean != 0 and settings.consecutive_stego == 0 or settings.consecutive_clean == 0 and settings.consecutive_stego != 0:
-			print("settings.consecutive_clean and settings.consecutive_stego are set to 0!")
-			settings.consecutive_clean = 0
+		if settings.consecutive_nonstego != 0 and settings.consecutive_stego == 0 or settings.consecutive_nonstego == 0 and settings.consecutive_stego != 0:
+			print("settings.consecutive_nonstego and settings.consecutive_stego are set to 0!")
+			settings.consecutive_nonstego = 0
 			settings.consecutive_stego = 0
 		
 		return settings, args
@@ -350,7 +441,7 @@ if __name__ == "__main__":
 
 	settings, args = Hop_Limit_CC.process_command_line(sys.argv)
 
-	hop_limit_cc = Hop_Limit_CC(settings.filepath, helper.read_binary_file_and_return_chunks(settings.filepath, 1), settings.role, settings.consecutive_clean, settings.consecutive_stego)
+	hop_limit_cc = Hop_Limit_CC(settings.filepath, helper.read_binary_file_for_n_packets_and_return_chunks(settings.filepath, settings.stegopackets[0], 1), settings.stegopackets, settings.role, settings.consecutive_nonstego, settings.consecutive_stego)
 
 	if hop_limit_cc.role == "sender":
 		helper.append_ip6tables_rule(sender=True)

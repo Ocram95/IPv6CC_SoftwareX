@@ -12,13 +12,13 @@ class Traffic_Class_CC:
 	
 	END_SIGNATURE = 524288
 
-	def __init__(self, filepath, chunks, role, consecutive_clean, consecutive_stego):
+	def __init__(self, filepath, chunks, role, consecutive_nonstego, consecutive_stego):
 		'''
 		Constructor for sender and receiver of a Traffic Class cc.
 		:param filepath: The path to the message to hide. 
 		:param chunks: A string list containing the message to hide splitted in chunks.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_nonstego: The length of the burst of non-stego packets.
 		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks
@@ -26,7 +26,7 @@ class Traffic_Class_CC:
 		self.role = role
 		self.filepath = filepath
 
-		self.consecutive_clean = consecutive_clean
+		self.consecutive_nonstego = consecutive_nonstego
 		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
@@ -91,7 +91,7 @@ class Traffic_Class_CC:
 								self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
 						else:
 							self.clean_counter += 1
-							self.stegotime = self.clean_counter % self.consecutive_clean == 0
+							self.stegotime = self.clean_counter % self.consecutive_nonstego == 0
 
 						# Calculate the next expected value						
 						self.next_expected_seq += len(pkt[TCP].payload)
@@ -132,7 +132,7 @@ class Traffic_Class_CC:
 						self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
 			else:
 				self.clean_counter += 1
-				self.stegotime = self.clean_counter % self.consecutive_clean == 0
+				self.stegotime = self.clean_counter % self.consecutive_nonstego == 0
 			if pkt.fl == Traffic_Class_CC.END_SIGNATURE:
 				self.endtime_stegocommunication = time.perf_counter()
 				self.stegotime = True
@@ -150,7 +150,7 @@ class Traffic_Class_CC:
 		
 	def write_csv(self):
 		
-		filename="traffic_class_cc_" + self.filepath.replace("../", "", 1) + "_number_of_packets_" + "_role_" + self.role + "_clean_packets_" + str(self.consecutive_clean) + "_number_stegopackets_" + str(self.consecutive_stego) + ".csv"
+		filename="traffic_class_cc_" + self.filepath.replace("../", "", 1) + "_number_of_packets_" + "_role_" + self.role + "_clean_packets_" + str(self.consecutive_nonstego) + "_number_stegopackets_" + str(self.consecutive_stego) + ".csv"
 		csv_file = Path(filename)
 		file_existed=csv_file.is_file()
 
@@ -231,14 +231,14 @@ class Traffic_Class_CC:
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
 		print('- Signature in field: Flow Label')			
 		print('- Exfiltrated File: ' + self.filepath)
-		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
+		if self.consecutive_nonstego > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
 				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.consecutive_clean):
+				for y in range(self.consecutive_nonstego):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Clean Packets: ' + str(self.consecutive_nonstego))		
 			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")		
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
@@ -326,12 +326,12 @@ class Traffic_Class_CC:
 
 		parser.add_option(
 		'-p',
-		'--consecutive_clean',
+		'--consecutive_nonstego',
 		help='specify the number of clean packets inserted before/after stegopackets (default: 0)',
 		default=0,
 		action='store',
 		type='int',
-		dest='consecutive_clean')
+		dest='consecutive_nonstego')
 
 		parser.add_option(
 		'-l',
@@ -350,9 +350,9 @@ class Traffic_Class_CC:
 		if settings.role not in ["sender", "receiver"]:
 			raise ValueError("ValueError: role can be only sender or receiver!")
 
-		if settings.consecutive_clean != 0 and settings.consecutive_stego == 0 or settings.consecutive_clean == 0 and settings.consecutive_stego != 0:
-			print("settings.consecutive_clean and settings.consecutive_stego are set to 0!")
-			settings.consecutive_clean = 0
+		if settings.consecutive_nonstego != 0 and settings.consecutive_stego == 0 or settings.consecutive_nonstego == 0 and settings.consecutive_stego != 0:
+			print("settings.consecutive_nonstego and settings.consecutive_stego are set to 0!")
+			settings.consecutive_nonstego = 0
 			settings.consecutive_stego = 0
 		
 		return settings, args
@@ -365,7 +365,7 @@ if __name__ == "__main__":
 
 	settings, args = Traffic_Class_CC.process_command_line(sys.argv)
 
-	traffic_class_cc = Traffic_Class_CC(settings.filepath, helper.read_binary_file_and_return_chunks(settings.filepath, helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Traffic Class"]), settings.role, settings.consecutive_clean, settings.consecutive_stego)
+	traffic_class_cc = Traffic_Class_CC(settings.filepath, helper.read_binary_file_and_return_chunks(settings.filepath, helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Traffic Class"]), settings.role, settings.consecutive_nonstego, settings.consecutive_stego)
 
 	if traffic_class_cc.role == "sender":
 		helper.append_ip6tables_rule(sender=True)

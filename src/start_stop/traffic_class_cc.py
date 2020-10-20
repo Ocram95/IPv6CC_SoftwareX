@@ -15,12 +15,12 @@ class Traffic_Class_CC:
 	END_MAGIC_VALUE = 254
 	#-------------- MAGIC VALUES --------------#
 
-	def __init__(self, chunks, role, consecutive_clean, consecutive_stego):
+	def __init__(self, chunks, role, consecutive_nonstego, consecutive_stego):
 		'''
 		Constructor for sender and receiver of a Traffic Class cc.
 		:param chunks: A string list containing the message to hide splitted in chunks.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_nonstego: The length of the burst of non-stego packets.
 		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks
@@ -40,7 +40,7 @@ class Traffic_Class_CC:
 		self.number_of_repetitions = 10
 		self.number_of_repetitions_done = 0
 
-		self.consecutive_clean = consecutive_clean
+		self.consecutive_nonstego = consecutive_nonstego
 		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
@@ -118,7 +118,7 @@ class Traffic_Class_CC:
 
 				else:
 					self.clean_counter += 1
-					self.stegotime = self.clean_counter % self.consecutive_clean == 0
+					self.stegotime = self.clean_counter % self.consecutive_nonstego == 0
 
 		self.received_packets += 1
 		packet.accept()
@@ -175,7 +175,7 @@ class Traffic_Class_CC:
 
 			else:
 				self.clean_counter += 1
-				if self.clean_counter % self.consecutive_clean == 0:
+				if self.clean_counter % self.consecutive_nonstego == 0:
 					self.stegotime = True
 					self.clean_counter = 0
 
@@ -284,14 +284,14 @@ class Traffic_Class_CC:
 		else:
 			print('########## Mode: Start/Stop | CC: Traffic Class | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
-		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
+		if self.consecutive_nonstego > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
 				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.consecutive_clean):
+				for y in range(self.consecutive_nonstego):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Clean Packets: ' + str(self.consecutive_nonstego))		
 			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")		
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
@@ -403,12 +403,12 @@ class Traffic_Class_CC:
 
 		parser.add_option(
 		'-p',
-		'--consecutive_clean',
+		'--consecutive_nonstego',
 		help='specify the number of clean packets inserted before/after stegopackets (default: 0)',
 		default=0,
 		action='store',
 		type='int',
-		dest='consecutive_clean')
+		dest='consecutive_nonstego')
 
 		parser.add_option(
 		'-l',
@@ -427,9 +427,9 @@ class Traffic_Class_CC:
 		if settings.role not in ["sender", "receiver"]:
 			raise ValueError("ValueError: role can be only sender or receiver!")
 
-		if settings.consecutive_clean != 0 and settings.consecutive_stego == 0 or settings.consecutive_clean == 0 and settings.consecutive_stego != 0:
-			print("settings.consecutive_clean and settings.consecutive_stego are set to 0!")
-			settings.consecutive_clean = 0
+		if settings.consecutive_nonstego != 0 and settings.consecutive_stego == 0 or settings.consecutive_nonstego == 0 and settings.consecutive_stego != 0:
+			print("settings.consecutive_nonstego and settings.consecutive_stego are set to 0!")
+			settings.consecutive_nonstego = 0
 			settings.consecutive_stego = 0
 		
 		return settings, args
@@ -444,7 +444,7 @@ if __name__ == "__main__":
 		helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Traffic Class"], \
 		character_stuffing=True, \
 		escape_value=Traffic_Class_CC.END_MAGIC_VALUE), \
-		settings.role, settings.consecutive_clean, \
+		settings.role, settings.consecutive_nonstego, \
 		settings.consecutive_stego)
 
 	if traffic_class_cc.role == 'sender':

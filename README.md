@@ -30,7 +30,7 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 ![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png)
 
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant while 
-the additional script, i.e., the ```helper.py``` script contains functions shared among all channels.
+the additional script, i.e., the ```helper.py``` script, contains functions shared among all channels.
 IPv6CC uses a combination of different libraries:
 - Scapy 2.4.3 (https://scapy.net/);
 - NetfilterQueue 0.8.1 (https://github.com/kti/python-netfilterqueue).
@@ -43,7 +43,7 @@ uses Scapy primitives to access the packet and inject, or extract, the secret in
 ## Installation
 The simply way to use IPv6CC is to clone the repository and use the dockerfile to build a Docker container:
  ```	
-$  git clone https://github.com/covert-channels-ipv6/ipv6_cc_scripts.git
+$  git clone https://github.com/Ocram95/IPv6CC_SoftwareX.git
 $  docker build -t name_of_container /docker/Dockerfile
  ```
  Another possibility is to clone the repository and manually install all libraries needed and their dependencies.
@@ -52,8 +52,8 @@ $  docker build -t name_of_container /docker/Dockerfile
 Let's start by looking at the help message of a the ```flow_label_cc.py``` file in the naive mode:
 
 ```
-$ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO] <br/>
-					  [-p CONSECUTIVE_CLEAN] [-n STEGOPACKETS]
+$ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO]  
+					  [-p CONSECUTIVE_NONSTEGO] [-n STEGOPACKETS]
 ```
 There are three mandatory parameters: 
 - ```-r ROLE``` is used to specify the role. Admitted values are ```sender``` and ```receiver```;
@@ -61,7 +61,7 @@ There are three mandatory parameters:
 - ```-n STEGOPACKETS``` is used to specify the number of stego-packets to be used. It is applied ONLY in the case
 of naive implementations;
 To configure the interleaving sending mode two optional parameters can be used:
-- ```-p CONSECUTIVE_CLEAN``` is the length of the burst of non-stego packets;  
+- ```-p CONSECUTIVE_NONSTEGO``` is the length of the burst of non-stego packets;  
 - ```-l CONSECUTIVE_STEGO``` is the length of the burst of stego-packets.  
 
 Before start the sender and the receiver, it is necessary to specify the source and the destination IPv6 addresses in the ```helper.py``` file: <br/>

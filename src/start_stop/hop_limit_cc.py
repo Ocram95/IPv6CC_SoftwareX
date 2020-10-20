@@ -8,24 +8,24 @@ from pathlib import Path
 sys.path.insert(1, '../')
 import helper
 
-class Flow_Label_CC:
+class Hop_Limit_CC:
 
 	#-------------- MAGIC VALUES --------------#
-	START_MAGIC_VALUE = 1048575
-	END_MAGIC_VALUE = 1048574
+	START_MAGIC_VALUE = 230
+	END_MAGIC_VALUE = 150
 	#-------------- MAGIC VALUES --------------#
 
-	def __init__(self, chunks, role, consecutive_clean, consecutive_stego):
+	def __init__(self, chunks, role, consecutive_nonstego, consecutive_stego):
 		'''
-		Constructor for sender and receiver of a Flow Label cc.
+		Constructor for sender and receiver of a Hop Limit cc.
 		:param chunks: A string list containing the message to hide splitted in chunks.
 		:param role: The role (i.e., sender or receiver) assigned.
-		:param consecutive_clean: The length of the burst of non-stego packets.
+		:param consecutive_nonstego: The length of the burst of non-stego packets.
 		:param consecutive_stego: The lenght of the burst of stego packets
 		'''
 		self.chunks = chunks
 		self.chunks_int = [int(x,2) for x in self.chunks]
-		
+
 		self.sent_received_chunks = 0
 		self.nfqueue = NetfilterQueue()
 		self.exfiltrated_data = []
@@ -34,13 +34,13 @@ class Flow_Label_CC:
 		self.role = role
 		self.first_packet = True
 		self.start_exf = False
-		self.dd = False
-		self.separate_test = False
+		self.finish_exf = False
 
-		self.number_of_repetitions = 10
+		self.number_of_repetitions = 20
 		self.number_of_repetitions_done = 0
+		self.hoplimit_delta = 20
 
-		self.consecutive_clean = consecutive_clean
+		self.consecutive_nonstego = consecutive_nonstego
 		self.consecutive_stego = consecutive_stego
 		self.stegotime = True
 		self.clean_counter = 0
@@ -58,70 +58,52 @@ class Flow_Label_CC:
 	   	:param Packet packet: The NetfilterQueue Packet object.
 	   	'''
 		if self.number_of_repetitions_done < self.number_of_repetitions:
-			
-			if self.start_exf and self.stegotime: 
-				tmp1 = time.perf_counter()
-			
+			tmp1 = time.perf_counter()
 			pkt = IPv6(packet.get_payload())
-			
-			if not self.start_exf:
-				self.start_exf = pkt.fl == Flow_Label_CC.START_MAGIC_VALUE
-				if self.start_exf:
-					self.starttime_stegocommunication = time.perf_counter()
+			if pkt.hlim > Hop_Limit_CC.START_MAGIC_VALUE:
+				self.starttime_stegocommunication = time.perf_counter()
+				self.start_exf = True
+			if pkt.hlim > Hop_Limit_CC.END_MAGIC_VALUE and pkt.hlim < Hop_Limit_CC.START_MAGIC_VALUE:
+				self.endtime_stegocommunication = time.perf_counter()
+				self.finish_exf = True
+				self.start_exf = False
+				self.number_of_repetitions_done += 1
+				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
+				self.statistical_evaluation_received_packets()
+				self.write_csv()
+				self.starttime_stegocommunication = 0.0
+				self.endtime_stegocommunication = 0.0
+				self.injection_exfiltration_time_sum = 0.0
+				self.received_packets = 0
+				self.sent_received_chunks = 0
+				self.exfiltrated_data = []
+				self.clean_counter = 0
+				self.stegotime = True
 
-			# Exfiltration started
-			else:
-				# If the previous packet was an escape sequence
-				if self.stegotime:
-					if self.dd:
-						# Unset delimiter detection Flag 
-						self.dd = False
-						# if the current packet is the end value => exfiltrate
-						if pkt.fl == Flow_Label_CC.END_MAGIC_VALUE:
-							self.exfiltrated_data.append(pkt.fl)
-							self.sent_received_chunks += 1
-						# The previous packet gets interpreted as end value => stop exfiltration
-						else:
-							# Stop the Exfiltration
-							self.start_exf = False
-							self.endtime_stegocommunication = time.perf_counter()
-							# Erase the Ending Value
-							self.exfiltrated_data = self.exfiltrated_data[:-1]
-							self.sent_received_chunks -= 1
-							self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
-							self.number_of_repetitions_done += 1
-							self.statistical_evaluation_received_packets()
-							self.write_csv()
-							self.received_packets = 0
-							self.sent_received_chunks = 0
-							self.clean_counter = 0
-							self.exfiltrated_data = []
-							self.stegotime = True
-							self.starttime_stegocommunication = 0.0
-							self.endtime_stegocommunication = 0.0
-							self.injection_exfiltration_time_sum = 0.0
-							if pkt.fl == Flow_Label_CC.START_MAGIC_VALUE:
-								self.starttime_stegocommunication = time.perf_counter()
-								self.start_exf = True
-
-					# Previous packet was not an escape sequence or ending value
+			if self.start_exf and not pkt.hlim > Hop_Limit_CC.START_MAGIC_VALUE:
+				if self.sent_received_chunks == 0 or self.stegotime:
+					hlim = pkt.hlim
+					if hlim > 64 and hlim < 150:
+						self.exfiltrated_data.append(1)
 					else:
-						# Is an escape sequence detected?
-						self.dd = pkt.fl == Flow_Label_CC.END_MAGIC_VALUE
-						self.exfiltrated_data.append(pkt.fl)
-						self.sent_received_chunks += 1
-						if self.consecutive_stego > 0:
-							self.stegotime = self.sent_received_chunks % self.consecutive_stego != 0
-
-					if self.start_exf: 
-						self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
-				
+						if hlim < 64:
+							self.exfiltrated_data.append(0)
+					self.sent_received_chunks += 1
+					if self.consecutive_stego > 0:
+						if self.sent_received_chunks % self.consecutive_stego == 0:
+							self.stegotime = False
 				else:
 					self.clean_counter += 1
-					self.stegotime = self.clean_counter % self.consecutive_clean == 0
+					if self.clean_counter % self.consecutive_nonstego == 0:
+						self.stegotime = True
+						self.clean_counter = 0
+		
+			if self.start_exf:
+				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
 
 		self.received_packets += 1
 		packet.accept()
+
 
 	def inject(self, packet):
 		'''
@@ -131,31 +113,38 @@ class Flow_Label_CC:
 	   	:param Packet packet: The NetfilterQueue Packet object packet.
 	   	'''
 		if self.number_of_repetitions_done < self.number_of_repetitions:
-			if self.stegotime:
-				tmp1 = time.perf_counter()
-				pkt = IPv6(packet.get_payload())
-				if self.sent_received_chunks < len(self.chunks):
+			tmp1 = time.perf_counter()
+			pkt = IPv6(packet.get_payload())
+			if self.sent_received_chunks < len(self.chunks):
+				if self.sent_received_chunks == 0 or self.stegotime:
 					if self.first_packet:
 						self.starttime_stegocommunication = time.perf_counter()
-						pkt.fl = Flow_Label_CC.START_MAGIC_VALUE
+						pkt.hlim = 255
 						self.first_packet = False
 						packet.set_payload(bytes(pkt))
 					else:
-						pkt.fl = int(self.chunks[self.sent_received_chunks], 2)
-						self.exfiltrated_data.append(pkt.fl)
+						single_bit = int(self.chunks[self.sent_received_chunks], 2)
+						if single_bit == 1:
+							pkt.hlim += self.hoplimit_delta
+						else:
+							pkt.hlim -= self.hoplimit_delta
+						self.exfiltrated_data.append(single_bit)
 						self.sent_received_chunks += 1
 						packet.set_payload(bytes(pkt))
-				
-						if self.consecutive_stego > 0:
-							if self.sent_received_chunks % self.consecutive_stego == 0:
-								self.stegotime = False
-							else:
-								self.stegotime = True
 
-					if not self.first_packet:
-						self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
+					if self.consecutive_stego > 0:
+						if self.sent_received_chunks % self.consecutive_stego == 0:
+							self.stegotime = False
+						else:
+							self.stegotime = True
 				else:
-					pkt.fl = Flow_Label_CC.END_MAGIC_VALUE
+					self.clean_counter += 1
+					if self.clean_counter % self.consecutive_nonstego == 0:
+						self.stegotime = True
+						self.clean_counter = 0
+			else:
+				if self.sent_received_chunks == len(self.chunks):
+					pkt.hlim = 200
 					packet.set_payload(bytes(pkt))
 					self.endtime_stegocommunication = time.perf_counter()
 					self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
@@ -171,11 +160,9 @@ class Flow_Label_CC:
 					self.starttime_stegocommunication = 0
 					self.endtime_stegocommunication = 0
 					self.exfiltrated_data = []
-			else:
-				self.clean_counter += 1
-				if self.clean_counter % self.consecutive_clean == 0:
-					self.stegotime = True
-					self.clean_counter = 0
+			
+			if not self.first_packet:
+				self.injection_exfiltration_time_sum += time.perf_counter() - tmp1
 		
 		self.sent_packets += 1
 		packet.accept()
@@ -185,6 +172,7 @@ class Flow_Label_CC:
 	   	Binds the inject method to the netfilter queue with its specific number and runs the callback function. 
 	   	If the user press Ctrl + c the inject method is unbind.  
 	   	'''
+
 		self.nfqueue.bind(helper.NETFILTER_QUEUE_NUMBER, self.inject)
 		try:
 			self.nfqueue.run()
@@ -206,7 +194,7 @@ class Flow_Label_CC:
 
 	def write_csv(self):
 		
-		filename="results_flow_label_" + str(len(self.chunks_int)) + "_" + str(self.role) + ".csv"
+		filename="results_hop_limit_" + str(len(self.chunks_int)) + "_" + str(self.role) + ".csv"
 		csv_file = Path(filename)
 		file_existed = csv_file.is_file()
 
@@ -223,7 +211,7 @@ class Flow_Label_CC:
 				writer.writerow([self.sent_received_chunks, \
 					round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2), \
 					round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2), \
-					round((helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"] * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)])  			
+					round((1 * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)])  			
 			else:
 				failures = 0
 				index_first_failure = -1 
@@ -265,11 +253,11 @@ class Flow_Label_CC:
 
 				if index_first_failure == -1:
 					index_first_failure = self.sent_received_chunks
-					
+
 				writer.writerow([self.sent_received_chunks, \
 					round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2), \
 					round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2), \
-					round((helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"] * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2), \
+					round((1 * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2), \
 					round(failures), \
 					round((index_first_failure/self.sent_received_chunks),2) * 100])
 
@@ -277,25 +265,25 @@ class Flow_Label_CC:
 
 		print('')
 		if self.role == "sender":
-			print('########## Mode: Start/Stop | CC: Flow Label | Side: Covert Sender ##########')
+			print('########## Mode: Start/Stop | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('########## Mode: Start/Stop | CC: Flow Label | Side: Covert Receiver ##########')
+			print('########## Mode: Start/Stop | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('- Number of Repetitions: ' + str(self.number_of_repetitions))		
-		if self.consecutive_clean > 0 and self.consecutive_stego > 0:
+		if self.consecutive_nonstego > 0 and self.consecutive_stego > 0:
 			buf = ""
 			for x in range(2):
 				for y in range(self.consecutive_stego):
 					buf += "S "
-				for y in range(self.consecutive_clean):
+				for y in range(self.consecutive_nonstego):
 					buf += "C "	
-			print('- Length Clean Packets: ' + str(self.consecutive_clean))		
+			print('- Length Clean Packets: ' + str(self.consecutive_nonstego))		
 			print('- Length Stego Packets: ' + str(self.consecutive_stego))		
 			print('  ==> Packet Pattern (S=stego, C=clean): ' + buf + "...")		
 		print('- Number of Chunks: ' + str(len(self.chunks)))	
 		if self.role == "sender":
-			print('########## Mode: Start/Stop | CC: Flow Label | Side: Covert Sender ##########')
+			print('########## Mode: Start/Stop | CC: Hop Limit | Side: Covert Sender ##########')
 		else:
-			print('########## Mode: Start/Stop | CC: Flow Label | Side: Covert Receiver ##########')
+			print('########## Mode: Start/Stop | CC: Hop Limit | Side: Covert Receiver ##########')
 		print('')
 		if self.role == "sender":
 			print('Injection in covert channel is started...')
@@ -305,6 +293,7 @@ class Flow_Label_CC:
 			print('Stop exfiltration with CTRL+C...')
 		print('')
 
+
 	def statistical_evaluation_sent_packets(self):
 		
 		print('')
@@ -313,7 +302,7 @@ class Flow_Label_CC:
 		print("- Stego-packets sent: " + str(self.sent_received_chunks) + "/" + str(len(self.chunks_int)))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Injection Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
-		print("- Bandwidth: " + str(round((helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"] * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
+		print("- Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
 		print("- Injected data == Chunks: " + str(self.exfiltrated_data == self.chunks_int))
 		print('##################### ANALYSIS SENT DATA #####################')
 		print('')
@@ -367,7 +356,7 @@ class Flow_Label_CC:
 		print("- Stego-packets received: " + str(self.sent_received_chunks) + "/" + str(len(self.chunks_int)))
 		print("- Duration of Stegocommunication: " + str(round((self.endtime_stegocommunication - self.starttime_stegocommunication) * 1000, 2)) + " ms")
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
-		print("- Bandwidth: " + str(round((helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"] * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
+		print("- Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
 		print("- Exfiltrated data == Chunks: " + str(self.exfiltrated_data == self.chunks_int) + " (" + str(failures) + " Failures)")
 		print("- Correct % message: " + str(round((index_first_failure/self.sent_received_chunks) * 100, 2)))
 		print('##################### ANALYSIS RECEIVED DATA #####################')
@@ -397,12 +386,12 @@ class Flow_Label_CC:
 
 		parser.add_option(
 		'-p',
-		'--consecutive_clean',
+		'--consecutive_nonstego',
 		help='specify the number of clean packets inserted before/after stegopackets (default: 0)',
 		default=0,
 		action='store',
 		type='int',
-		dest='consecutive_clean')
+		dest='consecutive_nonstego')
 
 		parser.add_option(
 		'-l',
@@ -421,9 +410,9 @@ class Flow_Label_CC:
 		if settings.role not in ["sender", "receiver"]:
 			raise ValueError("ValueError: role can be only sender or receiver!")
 
-		if settings.consecutive_clean != 0 and settings.consecutive_stego == 0 or settings.consecutive_clean == 0 and settings.consecutive_stego != 0:
-			print("settings.consecutive_clean and settings.consecutive_stego are set to 0!")
-			settings.consecutive_clean = 0
+		if settings.consecutive_nonstego != 0 and settings.consecutive_stego == 0 or settings.consecutive_nonstego == 0 and settings.consecutive_stego != 0:
+			print("settings.consecutive_nonstego and settings.consecutive_stego are set to 0!")
+			settings.consecutive_nonstego = 0
 			settings.consecutive_stego = 0
 		
 		return settings, args
@@ -433,22 +422,17 @@ class Flow_Label_CC:
 
 if __name__ == "__main__":
 
-	settings, args = Flow_Label_CC.process_command_line(sys.argv)
-	flow_label_cc = Flow_Label_CC(helper.read_binary_file_and_return_chunks(settings.filepath, \
-		helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"], \
-		character_stuffing=True, \
-		escape_value=Flow_Label_CC.END_MAGIC_VALUE), \
-		settings.role, settings.consecutive_clean, \
-		settings.consecutive_stego)
-	if flow_label_cc.role == 'sender':
+	settings, args = Hop_Limit_CC.process_command_line(sys.argv)
+	hop_limit_cc = Hop_Limit_CC(helper.read_binary_file_and_return_chunks(settings.filepath, 1), settings.role, settings.consecutive_nonstego, settings.consecutive_stego)
+
+	if hop_limit_cc.role == 'sender':
 		helper.append_ip6tables_rule(sender=True)
-		flow_label_cc.print_start_message()
-		flow_label_cc.start_sending()
+		hop_limit_cc.print_start_message()
+		hop_limit_cc.start_sending()
 		helper.delete_ip6tables_rule(sender=True)
-	elif flow_label_cc.role == 'receiver':
+	elif hop_limit_cc.role == 'receiver':
 		helper.append_ip6tables_rule(sender=False)
-		flow_label_cc.print_start_message()
-		flow_label_cc.start_receiving()
+		hop_limit_cc.print_start_message()
+		hop_limit_cc.start_receiving()
 		helper.delete_ip6tables_rule(sender=False)
-
-
+	
