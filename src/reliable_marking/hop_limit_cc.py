@@ -186,16 +186,40 @@ class Hop_Limit_CC:
 				failures = 0
 				index_first_failure = -1 
 
-				# Failure Calculation via Index 
-				for x in range(len(self.exfiltrated_data)):
-					if self.exfiltrated_data[x] != self.chunks[x]:
-						failures += 1
+				# Count the failures
+				if len(self.exfiltrated_data) <= len(self.chunks):
+					for x in range(len(self.exfiltrated_data)):
+						if self.exfiltrated_data[x] != self.chunks[x]:
+							failures += 1
+				else:
+					for x in range(len(self.chunks)):
+						if self.exfiltrated_data[x] != self.chunks[x]:
+							failures += 1
+				failures += abs(len(self.exfiltrated_data) - len(self.chunks))
 
-				# Determine first index of failure for Succesfully Transmitt
-				for x in range(len(self.exfiltrated_data)):
-					if self.exfiltrated_data[x] != self.chunks[x]:
-						index_first_failure = x
-						break
+				if failures != 0:
+					# Receive less than expected => first failure can happen in the middle or after the last index
+					if len(self.exfiltrated_data) < len(self.chunks):
+						for x in range(len(self.exfiltrated_data)):
+							if self.exfiltrated_data[x] != self.chunks[x]:
+								index_first_failure = x
+								break
+						if index_first_failure == -1:
+							index_first_failure = len(self.exfiltrated_data)
+					# Receive exactly the amount which is expected => index must be in the middle
+					elif len(self.exfiltrated_data) == len(self.chunks):
+						for x in range(len(self.chunks)):
+							if self.exfiltrated_data[x] != self.chunks[x]:
+								index_first_failure = x
+								break
+					else:
+					# Receive more than expected => first failure can happen in the middle or after the last index
+						for x in range(len(self.chunks)):
+							if self.exfiltrated_data[x] != self.chunks[x]:
+								index_first_failure = x
+								break
+						if index_first_failure == -1:
+							index_first_failure = len(self.chunks)
 
 				if index_first_failure == -1:
 					index_first_failure = self.sent_received_chunks
@@ -205,7 +229,7 @@ class Hop_Limit_CC:
 					round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2), \
 					round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2), \
 					failures, \
-					round(failures/self.sent_received_chunks, 2), \
+					round(failures/len(self.chunks), 2), \
 					round((index_first_failure/self.sent_received_chunks) * 100, 2)])
 
 
@@ -282,21 +306,43 @@ class Hop_Limit_CC:
 		print('')
 
 	def statistical_evaluation_received_packets(self):
-		
 		failures = 0
 		index_first_failure = -1 
 
-		# Failure Calculation via Index 
-		for x in range(len(self.exfiltrated_data)):
-			if self.exfiltrated_data[x] != self.chunks[x]:
-				failures += 1
+		# Count the failures
+		if len(self.exfiltrated_data) <= len(self.chunks):
+			for x in range(len(self.exfiltrated_data)):
+				if self.exfiltrated_data[x] != self.chunks[x]:
+					failures += 1
+		else:
+			for x in range(len(self.chunks)):
+				if self.exfiltrated_data[x] != self.chunks[x]:
+					failures += 1
+		failures += abs(len(self.exfiltrated_data) - len(self.chunks))
 
-		# Failure Calculation 1st Index 
-		
-		for x in range(len(self.exfiltrated_data)):
-			if self.exfiltrated_data[x] != self.chunks[x]:
-				index_first_failure = x
-				break
+		if failures != 0:
+			# Receive less than expected => first failure can happen in the middle or after the last index
+			if len(self.exfiltrated_data) < len(self.chunks):
+				for x in range(len(self.exfiltrated_data)):
+					if self.exfiltrated_data[x] != self.chunks[x]:
+						index_first_failure = x
+						break
+				if index_first_failure == -1:
+					index_first_failure = len(self.exfiltrated_data)
+			# Receive exactly the amount which is expected => index must be in the middle
+			elif len(self.exfiltrated_data) == len(self.chunks):
+				for x in range(len(self.chunks)):
+					if self.exfiltrated_data[x] != self.chunks[x]:
+						index_first_failure = x
+						break
+			else:
+			# Receive more than expected => first failure can happen in the middle or after the last index
+				for x in range(len(self.chunks)):
+					if self.exfiltrated_data[x] != self.chunks[x]:
+						index_first_failure = x
+						break
+				if index_first_failure == -1:
+					index_first_failure = len(self.chunks)
 
 		if index_first_failure == -1:
 			index_first_failure = self.sent_received_chunks
@@ -309,7 +355,7 @@ class Hop_Limit_CC:
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
 		print("- Average Bandwidth: " + str(round(self.sent_received_chunks / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
 		#print("- Exfiltrated data == Chunks: " + str(self.exfiltrated_data == self.chunks) + " (" + str(failures) + " Failures)")
-		print("- Error Rate: " + str(round(failures/self.sent_received_chunks, 2)) + " Failures/Packet")
+		print("- Error Rate: " + str(round(failures/len(self.chunks), 2)) + " Failures/Packet")
 		#print("- Successfully transmitted Message: " + str(round((index_first_failure/self.sent_received_chunks) * 100, 2)) + "%")
 		print('##################### ANALYSIS RECEIVED DATA #####################')
 		print('')
