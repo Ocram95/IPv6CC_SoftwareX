@@ -27,9 +27,8 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 - [Usage](#Usage)
 
 ## Architecture
-<p align="center">
 ![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png)
-</p>
+
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant while 
 the additional script, i.e., the ```helper.py``` script, contains functions shared among all channels.
 IPv6CC uses a combination of different libraries:
@@ -92,9 +91,9 @@ entirety, reaching 250 stego-packets. <br/>
 The above command, instead, is needed to run the receiver with the same parameters of the sender.
 
 At the end of each repetition, a log reports the output and the obtained performances, both for covert sender and receiver role:
-<p align="center">
+
 ![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/logs/analysis_receiver.png)
-</p>
+
 In the above image is depicted the log from the receiver side. Specifically, it reports the number of repetitions, the amount of stego-packets transmitted,
 the time needed to exfiltrate the secret message in its entirety, the average injection time to capture a packet and to modify it, the steganographic bandwidth, 
 the number of failures, the error rate and the fraction of the message correctly received.
