@@ -27,8 +27,9 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 - [Usage](#Usage)
 
 ## Architecture
+<p align="center">
 ![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png)
-
+</p>
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant while 
 the additional script, i.e., the ```helper.py``` script, contains functions shared among all channels.
 IPv6CC uses a combination of different libraries:
@@ -52,8 +53,7 @@ $  docker build -t name_of_container /docker/Dockerfile
 Let's start by looking at the help message of a the ```flow_label_cc.py``` file in the naive mode:
 
 ```
-$ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO]  
-					  [-p CONSECUTIVE_NONSTEGO] [-n STEGOPACKETS]
+$ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO]  [-p CONSECUTIVE_NONSTEGO] [-n STEGOPACKETS]
 ```
 There are three mandatory parameters: 
 - ```-r ROLE``` is used to specify the role. Admitted values are ```sender``` and ```receiver```;
@@ -76,7 +76,7 @@ PRESHARED_SEED = "seed"
 An additional parameter can be found in each script, and it defines the number of times to inject the same secret within the overt communication. This can be used
 to test multiple times at once:
 ```python
-NUMBER_OF_REPETITIONS = "20"
+number_of_repetitions = "20"
 ```
 
 Let's consider now a simple example on how it works, specifically using the Flow Label covert channel in the naive mode: <br/>
@@ -92,9 +92,9 @@ entirety, reaching 250 stego-packets. <br/>
 The above command, instead, is needed to run the receiver with the same parameters of the sender.
 
 At the end of each repetition, a log reports the output and the obtained performances, both for covert sender and receiver role:
-
+<p align="center">
 ![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/logs/analysis_receiver.png)
-
+</p>
 In the above image is depicted the log from the receiver side. Specifically, it reports the number of repetitions, the amount of stego-packets transmitted,
 the time needed to exfiltrate the secret message in its entirety, the average injection time to capture a packet and to modify it, the steganographic bandwidth, 
 the number of failures, the error rate and the fraction of the message correctly received.
