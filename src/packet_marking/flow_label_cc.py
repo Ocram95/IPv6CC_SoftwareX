@@ -152,16 +152,40 @@ class Flow_Label_CC:
 				failures = 0
 				index_first_failure = -1 
 
-				# Failure Calculation via Index 
-				for x in range(len(self.exfiltrated_data)):
-					if self.exfiltrated_data[x][0] != self.int_chunks[x]:
-						failures += 1
+				# Count the failures
+				if len(self.exfiltrated_data) <= len(self.int_chunks):
+					for x in range(len(self.exfiltrated_data)):
+						if self.exfiltrated_data[x] != self.int_chunks[x]:
+							failures += 1
+				else:
+					for x in range(len(self.int_chunks)):
+						if self.exfiltrated_data[x] != self.int_chunks[x]:
+							failures += 1
+				failures += abs(len(self.exfiltrated_data) - len(self.int_chunks))
 
-				# Determine first index of failure for Succesfully Transmitt
-				for x in range(len(self.exfiltrated_data)):
-					if self.exfiltrated_data[x][0] != self.int_chunks[x]:
-						index_first_failure = x
-						break
+				if failures != 0:
+					# Receive less than expected => first failure can happen in the middle or after the last index
+					if len(self.exfiltrated_data) < len(self.int_chunks):
+						for x in range(len(self.exfiltrated_data)):
+							if self.exfiltrated_data[x] != self.int_chunks[x]:
+								index_first_failure = x
+								break
+						if index_first_failure == -1:
+							index_first_failure = len(self.exfiltrated_data)
+					# Receive exactly the amount which is expected => index must be in the middle
+					elif len(self.exfiltrated_data) == len(self.int_chunks):
+						for x in range(len(self.int_chunks)):
+							if self.exfiltrated_data[x] != self.int_chunks[x]:
+								index_first_failure = x
+								break
+					else:
+					# Receive more than expected => first failure can happen in the middle or after the last index
+						for x in range(len(self.int_chunks)):
+							if self.exfiltrated_data[x] != self.int_chunks[x]:
+								index_first_failure = x
+								break
+						if index_first_failure == -1:
+							index_first_failure = len(self.int_chunks)
 
 				if index_first_failure == -1:
 					index_first_failure = self.sent_received_chunks
@@ -171,7 +195,7 @@ class Flow_Label_CC:
 					round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2), \
 					round((helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"] * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2), \
 					failures, \
-					round(failures/self.sent_received_chunks, 2), \
+					round(failures/len(self.int_chunks), 2), \
 					# round(100 - ((failures/self.sent_received_chunks) * 100), 2)])
 					round((index_first_failure/self.sent_received_chunks) * 100, 2)])
 
@@ -249,21 +273,43 @@ class Flow_Label_CC:
 		print('')
 
 	def statistical_evaluation_received_packets(self):
-		
 		failures = 0
 		index_first_failure = -1 
 
-		# Failure Calculation via Index 
-		for x in range(len(self.exfiltrated_data)):
-			if self.exfiltrated_data[x][0] != self.int_chunks[x]:
-				failures += 1
-				
-		# Failure Calculation 1st Index 
-		
-		for x in range(len(self.exfiltrated_data)):
-			if self.exfiltrated_data[x][0] != self.int_chunks[x]:
-				index_first_failure = x
-				break
+		# Count the failures
+		if len(self.exfiltrated_data) <= len(self.int_chunks):
+			for x in range(len(self.exfiltrated_data)):
+				if self.exfiltrated_data[x] != self.int_chunks[x]:
+					failures += 1
+		else:
+			for x in range(len(self.int_chunks)):
+				if self.exfiltrated_data[x] != self.int_chunks[x]:
+					failures += 1
+		failures += abs(len(self.exfiltrated_data) - len(self.int_chunks))
+
+		if failures != 0:
+			# Receive less than expected => first failure can happen in the middle or after the last index
+			if len(self.exfiltrated_data) < len(self.int_chunks):
+				for x in range(len(self.exfiltrated_data)):
+					if self.exfiltrated_data[x] != self.int_chunks[x]:
+						index_first_failure = x
+						break
+				if index_first_failure == -1:
+					index_first_failure = len(self.exfiltrated_data)
+			# Receive exactly the amount which is expected => index must be in the middle
+			elif len(self.exfiltrated_data) == len(self.int_chunks):
+				for x in range(len(self.int_chunks)):
+					if self.exfiltrated_data[x] != self.int_chunks[x]:
+						index_first_failure = x
+						break
+			else:
+			# Receive more than expected => first failure can happen in the middle or after the last index
+				for x in range(len(self.int_chunks)):
+					if self.exfiltrated_data[x] != self.int_chunks[x]:
+						index_first_failure = x
+						break
+				if index_first_failure == -1:
+					index_first_failure = len(self.int_chunks)
 
 		if index_first_failure == -1:
 			index_first_failure = self.sent_received_chunks
@@ -276,7 +322,7 @@ class Flow_Label_CC:
 		print("- Average Exfiltration Time: " + str(round((self.injection_exfiltration_time_sum / self.sent_received_chunks) * 1000, 2)) + " ms")
 		print("- Average Bandwidth: " + str(round((helper.IPv6_HEADER_FIELD_LENGTHS_IN_BITS["Flow Label"] * self.sent_received_chunks) / (self.endtime_stegocommunication - self.starttime_stegocommunication), 2)) + " bits/s")
 		#print("- Exfiltrated data == Chunks: " + str([x[0] for x in self.exfiltrated_data] == self.int_chunks) + " (" + str(failures) + " Failures)")
-		print("- Error Rate: " + str(round(failures/self.sent_received_chunks, 2)) + " Failures/Packet")
+		print("- Error Rate: " + str(round(failures/len(self.int_chunks), 2)) + " Failures/Packet")
 		#print("- Successfully transmitted Message: " + str(round((index_first_failure/self.sent_received_chunks) * 100, 2)) + "%")
 		print('##################### ANALYSIS RECEIVED DATA #####################')
 		print('')
