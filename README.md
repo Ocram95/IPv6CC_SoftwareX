@@ -24,7 +24,7 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 
 - [Architecture](#architecture)
 - [Installation](#installation)
-- [Usage](#Usage)
+- [Usage](#usage)
 
 ## Architecture
 ![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png)
