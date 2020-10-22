@@ -41,12 +41,77 @@ uses Scapy primitives to access the packet and inject, or extract, the secret in
 
 
 ## Installation
-The simply way to use IPv6CC is to clone the repository and use the dockerfile to build a Docker container:
- ```	
+
+### Using Docker
+The simple way to use IPv6CC is to clone the repository and use the dockerfile to build a Docker container containing the src folder with the scripts. The scripts are then visible in the root directory /root/covert_channels.
+
+1. Clone the repository to your local machine.
+```
 $  git clone https://github.com/Ocram95/IPv6CC_SoftwareX.git
-$  docker build -t name_of_container /docker/Dockerfile
- ```
- Another possibility is to clone the repository and manually install all libraries needed and their dependencies.
+```
+2. Copy the src folder of the repository into the docker directory
+```
+$  copy src/ -R docker/
+```
+3. Build the docker image from the docker file (you have to change to the directory with the dockerfile).
+```	
+$  cd docker/
+$  docker build -t [imagename] .
+```
+4. Create a docker subnetwork connecting sender and receiver to it. 
+```
+$  docker network create --driver bridge --ipv6 --subnet=[subnet]/subnetmask [networkname]
+```
+5. Instantiate the sender and the receiver from the build image.
+```
+$  docker run -d -P --privileged --name sender [imagename]
+$  docker run -d -P --privileged --name receiver [imagename]
+```
+6. Connect the sender and the receiver to the IPv6 docker network.
+```
+$  docker network connect --ip6 '[IPv6 address for sender in the subnet]' [networkname] sender
+$  docker network connect --ip6 '[IPv6 address for sender in the subnet]' [networkname] receiver
+```
+7. Display your running containers and look for the exposed SSH-port.
+```
+$  docker ps -a
+```
+8. Login to the exposed SSH-port  of the container on your local machine.
+```
+$  ssh root@localhost -p [exposed portnumber]
+```
+9. The password for the login prompt can be seen and set in the line of the docker file 24:
+```
+$  RUN echo 'root:PASSWORD' | chpasswd
+```
+
+### Native Usage 
+Another possibility is to clone the repository and manually install all libraries needed and their dependencies.
+
+1. Clone the repository to your local machine.
+```
+$  git clone https://github.com/Ocram95/IPv6CC_SoftwareX.git
+```
+2. Install python3
+```
+$  sudo apt-get install python3
+```
+3. Install libnetfilter-queue-dev 
+```
+$  sudo apt-get install libnetfilter-queue-dev 
+```
+4. Install pip3
+```
+$  sudo apt-get install python3-pip
+```
+5. Install NetfilterQueue 0.8.1
+```
+$  pip3 install NetfilterQueue
+```
+6. Install Scapy 2.4.3
+```
+$  pip3 install scapy
+```
 
 ## Usage
 Let's start by looking at the help message of a the ```flow_label_cc.py``` file in the naive mode:
