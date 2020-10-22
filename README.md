@@ -85,7 +85,7 @@ $  ssh root@localhost -p [exposed portnumber]
 $  RUN echo 'root:PASSWORD' | chpasswd
 ```
 
-### Native Usage 
+### Manual Installation
 Another possibility is to clone the repository and manually install all libraries needed and their dependencies.
 
 1. Clone the repository to your local machine.
