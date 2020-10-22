@@ -27,7 +27,9 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 - [Usage](#usage)
 
 ## Architecture
-![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png)
+<p align="center">
+  <img src="https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/architecture/softarch.png" />
+</p>
 
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant while 
 the additional script, i.e., the ```helper.py``` script, contains functions shared among all channels.
@@ -70,7 +72,7 @@ $  docker run -d -P --privileged --name receiver [imagename]
 6. Connect the sender and the receiver to the IPv6 docker network.
 ```
 $  docker network connect --ip6 '[IPv6 address for sender in the subnet]' [networkname] sender
-$  docker network connect --ip6 '[IPv6 address for sender in the subnet]' [networkname] receiver
+$  docker network connect --ip6 '[IPv6 address for receiver in the subnet]' [networkname] receiver
 ```
 7. Display your running containers and look for the exposed SSH-port.
 ```
@@ -117,7 +119,8 @@ $  pip3 install scapy
 Let's start by looking at the help message of a the ```flow_label_cc.py``` file in the naive mode:
 
 ```
-$ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO]  [-p CONSECUTIVE_NONSTEGO] [-n STEGOPACKETS]
+$ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO]    
+			[-p CONSECUTIVE_NONSTEGO] [-n STEGOPACKETS]
 ```
 There are three mandatory parameters: 
 - ```-r ROLE``` is used to specify the role. Admitted values are ```sender``` and ```receiver```;
@@ -157,7 +160,9 @@ The above command, instead, is needed to run the receiver with the same paramete
 
 At the end of each repetition, a log reports the output and the obtained performances, both for covert sender and receiver role:
 
-![Alt text](https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/logs/analysis_receiver.png)
+<p align="center">
+  <img src="https://github.com/Ocram95/IPV6CC_SoftwareX/blob/main/docs/logs/analysis_receiver.png" />
+</p>
 
 In the above image is depicted the log from the receiver side. Specifically, it reports the number of repetitions, the amount of stego-packets transmitted,
 the time needed to exfiltrate the secret message in its entirety, the average injection time to capture a packet and to modify it, the steganographic bandwidth, 
