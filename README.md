@@ -2,9 +2,9 @@
 IPv6CC implements several network covert channels based on IPv6 protocol in Python3. The covert channels allow a sender to secretly communicate
 with a receiver, by injecting the information through three possible fields of the IPv6 header:
 
-- Traffic Class (8 bit/packet)
-- Flow Label (20 bit/packet)
-- Hop Limit (1 bit/packet)
+- Traffic Class (8 bit/packet).
+- Flow Label (20 bit/packet).
+- Hop Limit (1 bit/packet).
 
 There are multiple variants implemented:
 - Naive mode: the covert sender and the covert receiver agree on the total number of stegopackets to transmit. The receiver will extract the proper number of incoming 
@@ -34,7 +34,7 @@ the knowledge of sequence numbers of the TCP header to identify missing packets 
 IPv6CC is written in Python3 and it is composed of 13 different python scripts: 12 scripts implement both the covert sender and receiver in each variant while 
 the additional script, i.e., the ```helper.py``` script, contains functions shared among all channels.
 IPv6CC uses a combination of different libraries:
-- Scapy 2.4.3 (https://scapy.net/);
+- Scapy 2.4.3 (https://scapy.net/).
 - NetfilterQueue 0.8.1 (https://github.com/kti/python-netfilterqueue).
 
 In detail, NetfilterQueue is used to insert packets which match a specific ip6tables rule (which can be found in the ```helper.py``` file) into a queue. 
@@ -51,7 +51,7 @@ The simple way to use IPv6CC is to clone the repository and use the dockerfile t
 ```
 $  git clone https://github.com/Ocram95/IPv6CC_SoftwareX.git
 ```
-2. Copy the src folder of the repository into the docker directory
+2. Copy the src folder of the repository into the docker directory.
 ```
 $  copy src/ -R docker/
 ```
@@ -82,7 +82,7 @@ $  docker ps -a
 ```
 $  ssh root@localhost -p [exposed portnumber]
 ```
-9. The password for the login prompt can be seen and set in the line of the docker file 24:
+9. The password for the login prompt can be seen and set in the line of the docker file 24.
 ```
 $  RUN echo 'root:PASSWORD' | chpasswd
 ```
@@ -94,25 +94,25 @@ Another possibility is to clone the repository and manually install all librarie
 ```
 $  git clone https://github.com/Ocram95/IPv6CC_SoftwareX.git
 ```
-2. Install python3
+2. Install python3.
 ```
 $  sudo apt-get install python3
 ```
-3. Install libnetfilter-queue-dev 
+3. Install libnetfilter-queue-dev.
 ```
 $  sudo apt-get install libnetfilter-queue-dev 
 ```
-4. Install pip3
+4. Install pip3.
 ```
 $  sudo apt-get install python3-pip
 ```
-5. Install NetfilterQueue 0.8.1
+5. Install NetfilterQueue 0.8.1.
 ```
-$  pip3 install NetfilterQueue
+$  pip3 install -Iv NetfilterQueue==0.8.1
 ```
-6. Install Scapy 2.4.3
+6. Install Scapy 2.4.3.
 ```
-$  pip3 install scapy
+$  pip3 install -Iv scapy==2.4.3
 ```
 
 ## Usage
@@ -123,12 +123,12 @@ $ python3 flow_label_cc.py [-r ROLE] [-f FILE_PATH] [-l CONSECUTIVE_STEGO]
 			[-p CONSECUTIVE_NONSTEGO] [-n STEGOPACKETS]
 ```
 There are three mandatory parameters: 
-- ```-r ROLE``` is used to specify the role. Admitted values are ```sender``` and ```receiver```;
-- ```-f FILE-PATH``` is used to specify the path for the file to secretly communicate from the sender to the receiver; 
+- ```-r ROLE``` is used to specify the role. Admitted values are ```sender``` and ```receiver```.
+- ```-f FILE-PATH``` is used to specify the path for the file to secretly communicate from the sender to the receiver;.
 - ```-n STEGOPACKETS``` is used to specify the number of stego-packets to be used. It is applied ONLY in the case
-of naive implementations;
+of naive implementations.
 To configure the interleaving sending mode two optional parameters can be used:
-- ```-p CONSECUTIVE_NONSTEGO``` is the length of the burst of non-stego packets;  
+- ```-p CONSECUTIVE_NONSTEGO``` is the length of the burst of non-stego packets.
 - ```-l CONSECUTIVE_STEGO``` is the length of the burst of stego-packets.  
 
 Before start the sender and the receiver, it is necessary to specify the source and the destination IPv6 addresses in the ```helper.py``` file: <br/>
