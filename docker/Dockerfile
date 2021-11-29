@@ -6,19 +6,19 @@ COPY src/ /root/covert_channels
 ENV TZ=Europe/Kiev
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt update
-RUN apt install sudo
-RUN apt install iputils-ping -y
-RUN apt install net-tools -y
-RUN apt install vim -y
-RUN apt install python3-pip -y
+RUN apt-get update
+RUN apt-get install sudo
+RUN apt-get install iputils-ping -y
+RUN apt-get install net-tools -y
+RUN apt-get install vim -y
+RUN apt-get install python3-pip -y
 RUN pip3 install -Iv scapy==2.4.3
-RUN apt install libnetfilter-queue-dev -y
+RUN apt-get install libnetfilter-queue-dev -y
 RUN pip3 install -Iv NetfilterQueue==0.8.1
-RUN apt install iptables -y
-RUN apt install iperf3 -y
-RUN DEBIAN_FRONTEND=noninteractive apt install tshark -y
-RUN apt update && apt install -y openssh-server
+RUN apt-get install iptables -y
+RUN apt-get install iperf3 -y
+RUN DEBIAN_FRONTEND=noninteractive apt-get install tshark -y
+RUN apt-get update && apt-get install -y openssh-server
 RUN mkdir /var/run/sshd
 
 RUN echo 'root:PASSWORD' | chpasswd
