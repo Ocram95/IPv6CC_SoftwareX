@@ -53,7 +53,7 @@ $  git clone https://github.com/Ocram95/IPv6CC_SoftwareX.git
 ```
 2. Copy the src folder of the repository into the docker directory.
 ```
-$  copy src/ -R docker/
+$  cp src/ -R docker/
 ```
 3. Build the docker image from the docker file (you have to change to the directory with the dockerfile).
 ```	
