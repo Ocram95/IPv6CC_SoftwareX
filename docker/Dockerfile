@@ -1,4 +1,5 @@
 FROM ubuntu:16.04
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN mkdir /root/covert_channels
 COPY src/ /root/covert_channels
@@ -7,6 +8,7 @@ ENV TZ=Europe/Kiev
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update
+RUN apt-get install apt-utils -y
 RUN apt-get install sudo
 RUN apt-get install iputils-ping -y
 RUN apt-get install net-tools -y
@@ -17,7 +19,7 @@ RUN apt-get install libnetfilter-queue-dev -y
 RUN pip3 install -Iv NetfilterQueue==0.8.1
 RUN apt-get install iptables -y
 RUN apt-get install iperf3 -y
-RUN DEBIAN_FRONTEND=noninteractive apt-get install tshark -y
+RUN apt-get install tshark -y
 RUN apt-get update && apt-get install -y openssh-server
 RUN mkdir /var/run/sshd
 
