@@ -168,3 +168,5 @@ In the above image is depicted the log from the receiver side. Specifically, it 
 the time needed to exfiltrate the secret message in its entirety, the average injection time to capture a packet and to modify it, the steganographic bandwidth, 
 the number of failures, the error rate and the fraction of the message correctly received.
 
+# Acknowledgements 
+This work was supported by the Horizon 2020 Program through [SIMARGL](https://simargl.eu/) H2020-SU-ICT-01-2018, Grant Agreement No. 833042.
